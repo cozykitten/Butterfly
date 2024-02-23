@@ -1,0 +1,17 @@
+{
+  "name": "butterfly",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "",
+  "main": "./src/app.js",
+  "scripts": {
+    "dev": "SET NODE_ENV=development && node ./src/app.js",
+    "app": "SET NODE_ENV=production && node ./src/app.js"
+  },
+  "author": "cozykitten",
+  "license": "ISC",
+  "dependencies": {
+    "custom-env": "^2.0.2",
+    "discord.js": "^14.14.1"
+  }
+}
