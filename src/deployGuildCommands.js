@@ -22,7 +22,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.CLIENT_TOKEN);
 register();
 
 async function register() {
-	const guildId = '1210715768992567336';
+	const guildId = JSON.parse(process.env.GUILD_ID)[0];
 	try {
 		await rest.put(Routes.applicationGuildCommands(process.env.CLIENT_ID, guildId), { body: commands })
 

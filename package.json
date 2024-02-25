@@ -6,7 +6,8 @@
   "main": "./src/app.js",
   "scripts": {
     "dev": "SET NODE_ENV=development && node ./src/app.js",
-    "app": "SET NODE_ENV=production && node ./src/app.js"
+    "app": "SET NODE_ENV=production && node ./src/app.js",
+    "deploy": "SET NODE_ENV=development && node ./src/deployGuildCommands.js"
   },
   "author": "cozykitten",
   "license": "ISC",
