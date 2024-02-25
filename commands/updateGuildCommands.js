@@ -136,8 +136,8 @@ export default {
         if (interaction.options.getSubcommand() === 'global') {
             const success = await registerGlobal(rest, await commandList(commandFiles, global, 'GLOBAL'));
 
-            if (success) return interaction.reply({ content: `Successfully registered GLOBAL application commands <:AriliaHYPE:1090763681136119818>`, ephemeral: false });
-            else return interaction.reply({ content: `Failed registering application commands <:AriliaFINE:963144852432896081>`, ephemeral: false });
+            if (success) return interaction.reply({ content: `Successfully registered GLOBAL application commands <:AriliaHYPE:1211050519871623248>`, ephemeral: false });
+            else return interaction.reply({ content: `Failed registering application commands <:AriliaFINE:1211050953537495111>`, ephemeral: false });
         }
 
 
@@ -153,8 +153,8 @@ export default {
 
             const count = await registerAll(rest, interaction, commands)
 
-            if (count) interaction.editReply({ content: `Successfully registered application commands for ${count} guilds <:AriliaHYPE:1090763681136119818>`, ephemeral: false });
-            else interaction.editReply({ content: `Failed registering application commands <:AriliaFINE:963144852432896081>`, ephemeral: false });
+            if (count) interaction.editReply({ content: `Successfully registered application commands for ${count} guilds.`, ephemeral: false });
+            else interaction.editReply({ content: `Failed registering application commands.`, ephemeral: false });
 
         } else {
             let guildID;
@@ -166,8 +166,8 @@ export default {
             
             const success = await register(rest, guildID, commands);
 
-            if (success) interaction.reply({ content: `Successfully registered application commands for ${interaction.options.getString('id') ? guildID : 'this guild'} <:AriliaHYPE:1090763681136119818>`, ephemeral: false });
-            else interaction.reply({ content: `Failed registering application commands <:AriliaFINE:963144852432896081>`, ephemeral: false });
+            if (success) interaction.reply({ content: `Successfully registered application commands for ${interaction.options.getString('id') ? guildID : 'this guild'} <:AriliaHYPE:1211050519871623248>`, ephemeral: true });
+            else interaction.reply({ content: `Failed registering application commands <:AriliaFINE:1211050953537495111>`, ephemeral: true });
         }
 	}
 }

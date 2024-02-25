@@ -17,5 +17,4 @@ export default async (guild) => {
             }
         ]
     });
-    await defaultChannel.send(db.serverConfig.joinMessage);
 }

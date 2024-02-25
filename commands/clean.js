@@ -54,7 +54,7 @@ async function deleteMessageAmount(interaction) {
 
     if (messages.size && messages.at(-1).createdTimestamp + 1209000000 > Date.now()) {
         await interaction.channel.bulkDelete(messages, true);
-        await interaction.editReply({ content: `Deleted messages. <:AriliaSALUT:1150822630283292702>`, ephemeral: true });
+        await interaction.editReply({ content: `Deleted messages.`, ephemeral: true });
         return;
     }
 
@@ -65,7 +65,7 @@ async function deleteMessageAmount(interaction) {
         }
     });
     await Promise.all(deletePromises);
-    interaction.editReply({ content: `Deleted messages. <:AriliaSALUT:1150822630283292702>`, ephemeral: true });
+    interaction.editReply({ content: `Deleted messages.`, ephemeral: true });
 }
 
 /**
@@ -93,7 +93,7 @@ async function deleteMessageAmountDM(interaction) {
         await msg.delete();
     });
     await Promise.all(deletePromises);
-    interaction.editReply({ content: `Deleted messages. <:AriliaSALUT:1150822630283292702>`, ephemeral: true });
+    interaction.editReply({ content: `Deleted messages.`, ephemeral: true });
 }
 
 export default {

@@ -30,7 +30,7 @@ export default {
         }
 
         if (!fail.length) {
-            interaction.editReply({ content: "Shared message with " + users.length + " users. <:AriliaWOW:1090764833546313728>", ephemeral: true });
+            interaction.editReply({ content: "Shared message with " + users.length + " users.", ephemeral: true });
         }
         else {
             interaction.editReply({ content: "Cannot send messages to " + fail.join(', '), ephemeral: true });

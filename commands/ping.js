@@ -30,13 +30,5 @@ export default {
 				inline: true
 			});
 			interaction.editReply({ content: '', embeds: [embed] });
-
-			const testGuild = {
-				name: 'ari test server for bot',
-				id: '1210715768992567336'
-			};
-			
-			// Manually calling the event handler
-			client.emit('guildCreate', testGuild);
 	}
 }
