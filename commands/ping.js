@@ -18,7 +18,7 @@ export default {
 
 		const embed = new EmbedBuilder()
 			.setTitle('Ping')
-			.setColor(0x797FCB)
+			.setColor(0xFE676E)
 			.addFields({ 
 				name: 'Latency',
 				value: botLatency,

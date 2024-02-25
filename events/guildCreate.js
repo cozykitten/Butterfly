@@ -6,7 +6,7 @@ export default async (guild) => {
             {
                 "title": "BakaBot has joined!",
                 "description": "Nice to meet you, this is me:",
-                "color": 9472718,
+                "color": 16672622,
                 "author": {
                     "name": "BakaBot",
                     "icon_url": "https://cdn.discordapp.com/avatars/658834271917572129/634285bd084db6323f4bcdcbbf48d6eb.webp"
