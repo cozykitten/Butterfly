@@ -1,4 +1,7 @@
 import { Collection } from 'discord.js';
+import { db, sync }from './dbManager';
+import { env } from "custom-env";
+env();
 
 export async function startup(eventFiles, commandFiles, client) {
     
@@ -22,4 +25,19 @@ export async function startup(eventFiles, commandFiles, client) {
             console.error('\x1b[31mError reading ' + file + '\x1b[0m');
         }
     }
+}
+
+export async function restartApplication() {
+    
+    console.log('restarting application..');
+	db.lastexit = true;
+	try {
+        await sync(db);
+    } catch (error) {
+        const home = await client.guilds.fetch(db.HOME);
+        const log = await home.channels.fetch(db.LOG);
+        await log.send(`Error while syncing the database:\n${error.message}`);
+    }
+	await client.destroy();
+	process.exit();
 }

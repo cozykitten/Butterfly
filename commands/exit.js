@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { env } from "custom-env";
 env();
-import { reloadApplication, restartApplication } from '../src/reloadManager';
+import { restartApplication } from '../src/reloadManager';
 import pm2 from 'pm2';
 
 
@@ -25,7 +25,7 @@ export default {
 		}
 
 		await interaction.reply({ content: 'Good night! <:AriliaSLEEP:1038896867305603122>', ephemeral: true});
-		
+
 		pm2.connect(function (err) {
 			if (err) {
 				console.error(err);

@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
-//import { db, sync } from '../src/dbManager';
+import { db, sync } from '../src/dbManager';
 
 function createEmbed(interaction) {
 
@@ -19,42 +19,35 @@ function createEmbed(interaction) {
     return embed;
 }
 
-async function editEmbed(message, name) {
-
-    const e_index = await retrieveIndex(name);
-    if (e_index) {
-        message.reply("I couldn't find an embed with that name");
-        return false;
-    }
+async function editEmbed(interaction) {
 
     const attrib = ['title', 'description', 'color']
     const attrib_2 = ['image', 'thumbnail'];
     
     attrib.forEach(element => {
-        if (message.options.getString(element)) {
-            db.custom_embed[e_index].embed[element] = message.options.getString(element);
+        if (interaction.options.getString(element)) {
+            db.custom_embed[e_index].embed[element] = interaction.options.getString(element);
         }
     });
 
     attrib_2.forEach(element => {
-        if (message.options.getString(element)) {
-            db.custom_embed[e_index].embed[element].url = message.options.getString(element);
+        if (interaction.options.getString(element)) {
+            db.custom_embed[e_index].embed[element].url = interaction.options.getString(element);
         }
     });
     
-    if (message.options.getString('author')) {
-        db.custom_embed[e_index].embed.author.name = message.options.getString('author');
+    if (interaction.options.getString('author')) {
+        db.custom_embed[e_index].embed.author.name = interaction.options.getString('author');
     }
-    if (message.options.getString('author_icon')) {
-        db.custom_embed[e_index].embed.author.icon_url = message.options.getString('author_icon');
+    if (interaction.options.getString('author_icon')) {
+        db.custom_embed[e_index].embed.author.icon_url = interaction.options.getString('author_icon');
     }
-    if (message.options.getString('footer')) {
-        db.custom_embed[e_index].embed.footer.text = message.options.getString('footer');
+    if (interaction.options.getString('footer')) {
+        db.custom_embed[e_index].embed.footer.text = interaction.options.getString('footer');
     }
-    if (message.options.getString('footer_icon')) {
-        db.custom_embed[e_index].embed.footer.icon_url = message.options.getString('footer_icon');
+    if (interaction.options.getString('footer_icon')) {
+        db.custom_embed[e_index].embed.footer.icon_url = interaction.options.getString('footer_icon');
     }
-    sync(db);
     return db.custom_embed[e_index].embed;
 }
 
@@ -123,7 +116,6 @@ export default {
                 else interaction.reply({ content: 'I might not have permissions to send messages in this channel.', ephemeral: true });
             }
             else if (interaction.options.getString('name')) {//save as name
-                return interaction.reply({ content: 'Currently unavailable', ephemeral: true });
                 const index = await db.custom_embed.findIndex(list => list.name === interaction.options.getString('name'));
                 if (index === -1) {
 
@@ -150,7 +142,7 @@ export default {
             }
         }
         else if (sub === 'delete') {
-            return interaction.reply({ content: 'Currently unavailable', ephemeral: true });
+
             const i = await retrieveIndex(interaction.options.getString('name'));
             if (i) {
                 await db.custom_embed.splice(i, 1);
@@ -160,18 +152,18 @@ export default {
             else return interaction.reply('This embed doesn\'nt exist');
         }
         else if (sub === 'send') {
-            return interaction.reply({ content: 'Currently unavailable', ephemeral: true });
+
             const i = await retrieveIndex(interaction.options.getString('name'));
             if (i) {
                 const e_embed = await db.custom_embed[i].embed;
                 const sent = await interaction.options.getChannel('channel').send({ embeds: [e_embed] });
                 if (sent) interaction.reply({ content: 'embed sent', ephemeral: true });
-                else interaction.reply('I might not have the permissions to send messages in this channel');
+                else interaction.reply('I might not have permissions to send messages in this channel');
             }
             else return interaction.reply('This embed doesn\'nt exist');
         }
         else if (sub === 'view') {
-            return interaction.reply({ content: 'Currently unavailable', ephemeral: true });
+
             const i = await retrieveIndex(interaction.options.getString('name'));
             if (i) {
                 const e_embed = await db.custom_embed[i].embed;
@@ -180,12 +172,17 @@ export default {
             else return interaction.reply('This embed doesn\'nt exist');
         }
         else if (sub === 'edit') {
-            return interaction.reply({ content: 'Currently unavailable', ephemeral: true });
-            const e_embed = await editEmbed(interaction, interaction.options.getString('name'))
-            if (e_embed) interaction.reply({ content: `I updated ${interaction.options.getString('name')} to`, embeds: [e_embed] });            
+
+            const i = await retrieveIndex(interaction.options.getString('name'));
+            if (i) {
+                const e_embed = await editEmbed(interaction)
+                sync(db);
+                interaction.reply({ content: `I updated ${interaction.options.getString('name')} to`, embeds: [e_embed] });            
+            }
+            else return interaction.reply("I couldn't find an embed with that name");
         }
         else if (sub === 'update') {
-            return interaction.reply({ content: 'Currently unavailable', ephemeral: true });
+
             const i = await retrieveIndex(interaction.options.getString('name'));
             if (i) {
                 const e_embed = await db.custom_embed[i].embed;
@@ -198,7 +195,7 @@ export default {
             else return interaction.reply('This embed doesn\'nt exist');
         }
         else { //must be list
-            return interaction.reply({ content: 'Currently unavailable', ephemeral: true });
+            
             if (!db.custom_embed || !db.custom_embed[0]) {
                 return interaction.reply('You didn\'t save any embeds');
             } else {
