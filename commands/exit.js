@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
 import { env } from "custom-env";
 env();
 import { restartApplication } from '../src/reloadManager.js';
@@ -24,14 +24,19 @@ export default {
 			return;
 		}
 
-		await interaction.reply({ content: 'Good night! <:AriliaSLEEP:1038896867305603122>', ephemeral: true});
+		const embed = new EmbedBuilder()
+			.setTitle('Don\'t leave me Onee-chan <:AriliaSAD:1211497594493341836>')
+			.setColor(0xFE676E)
+			.setImage('https://raw.githubusercontent.com/cozykitten/Butterfly/master/data/exit_lowres.jpg');
+		await interaction.reply({ embeds: [embed] });	
+			//await interaction.reply({ content: 'Good night! <:AriliaSLEEP:1038896867305603122>', ephemeral: true});
 
 		pm2.connect(function (err) {
 			if (err) {
 				console.error(err);
 				process.exit(2);
 			}
-			pm2.stop('ecosystem.config.js');
+			pm2.stop('Butterfly');
 		});
 	}
 }

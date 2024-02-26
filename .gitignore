@@ -1,7 +1,7 @@
 # custom
 commands/old/
 data/*
-!data/exit.png
+!data/exit_lowres.jpg
 .vscode/
 butterfly.code-workspace
 package-lock.json

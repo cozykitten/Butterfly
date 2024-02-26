@@ -27,7 +27,7 @@ export async function startup(eventFiles, commandFiles, client) {
     }
 }
 
-export async function restartApplication() {
+export async function restartApplication(client) {
     
     console.log('restarting application..');
 	db.lastexit = true;
