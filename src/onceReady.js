@@ -1,7 +1,7 @@
 import { EmbedBuilder } from 'discord.js';
 import { env } from "custom-env";
 env();
-const { db, sync } = require('./dbManager');
+import { db, sync } from './dbManager.js';
 
 
 export default async (client) => {

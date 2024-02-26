@@ -1,5 +1,5 @@
 import { Collection } from 'discord.js';
-import { db, sync }from './dbManager';
+import { db, sync }from './dbManager.js';
 import { env } from "custom-env";
 env();
 

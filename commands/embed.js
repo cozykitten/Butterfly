@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
-import { db, sync } from '../src/dbManager';
+import { db, sync } from '../src/dbManager.js';
 
 function createEmbed(interaction) {
 
@@ -195,7 +195,7 @@ export default {
             else return interaction.reply('This embed doesn\'nt exist');
         }
         else { //must be list
-            
+
             if (!db.custom_embed || !db.custom_embed[0]) {
                 return interaction.reply('You didn\'t save any embeds');
             } else {

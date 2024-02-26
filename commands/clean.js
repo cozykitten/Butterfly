@@ -40,7 +40,7 @@ async function deleteMessageAmount(interaction) {
         messages = await interaction.channel.messages.fetch({ limit: 100, cache: false });
         const id = interaction.options.getUser('user').id;
 
-        messages = messages.filter((m) => {
+        messages = messages.filter(function (m) {
             if (this.count < interaction.options.getInteger('amount') && m.author.id === id) {
                 this.count++;
                 return true;

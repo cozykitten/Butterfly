@@ -4,7 +4,7 @@ import fs from 'fs';
 import { env } from "custom-env";
 env();
 import { startup } from './reloadManager.js';
-import { db, sync }from './dbManager';
+import { db, sync } from './dbManager.js';
 
 
 const myIntents = new IntentsBitField();
@@ -20,8 +20,8 @@ const client = new Client({ intents: myIntents });
 client.once('ready', async () => {
     console.log(`\n\x1b[34mClient has logged in as ${client.user.tag}\x1b[0m`);
     console.log(`Environment is ${process.env.APP_ENVIRONMENT}`);
-    const onceReady = await import('./onceReady');
-    onceReady(client);
+    const onceReady = await import('./onceReady.js');
+    onceReady.default(client);
 })
 
 

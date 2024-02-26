@@ -1,7 +1,7 @@
 import fs from 'fs';
 
 async function readDatabase(file) {
-    const data = fs.promises.readFile(`./data/${file}`);
+    const data = await fs.promises.readFile(`./data/${file}`);
     return JSON.parse(data);
 }
 export const db = await readDatabase('config.json');

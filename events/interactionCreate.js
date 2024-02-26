@@ -1,4 +1,4 @@
-import { db, sync } from '../src/dbManager';
+import { db, sync } from '../src/dbManager.js';
 
 export default async (interaction) => {
 
