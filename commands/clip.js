@@ -1,8 +1,7 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
+import { db } from '../src/dbManager.js';
 import { env } from "custom-env";
 env();
-
-//TODO: add modChannel to .envs
 
 export default {
     data: new SlashCommandBuilder()
@@ -16,16 +15,14 @@ export default {
                 { name: 'Cute', value: 2 },
                 { name: 'Other', value: 3 }
             ))
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
         .setDMPermission(false),
 
     async execute(interaction) {
 
-        const channelIds = ['1210715769697206329', '1210715769697206330', '1210715769697206331', '1210715769965383760'];
+        const channelIds = db[interaction.guild.id].clipChannels;
 
         const urlRegex = /(https:\/\/(?:clips.|www.)?twitch.tv\/[^\s]+)/;
         const firstUrl = interaction.options.getString('url').match(urlRegex)[0];
-        console.log(firstUrl)
 
         if (!firstUrl) interaction.reply({ content: "It clearly says **twitch clip** yk?.", ephemeral: true });
 
@@ -35,6 +32,9 @@ export default {
             return interaction.reply({ content: "Thamks <:AriliaFLOWER:1211088057260974181>", ephemeral: true });
         } catch (err) {
             console.error(err);
+            const guild = await interaction.client.guilds.cache.get(db.HOME);
+            const log = await guild.channels.cache.get(db.LOG);
+            log.send(`Error sending twitch clip to ${channel.name}:`, e);
             return interaction.reply({ content: "I can't access this channel, please bug Crup about it.", ephemeral: true });
         }
     }
