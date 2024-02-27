@@ -43,19 +43,17 @@ async function commandList(commandFiles, modifiedSet, setName) {
  */
 async function register(rest, guildID, commands) {
     let success = false;
-   // for (const iterator of JSON.parse(process.env.GUILD_ID)) {
-    const iterator = guildID;
         try {
-            await rest.put(Routes.applicationGuildCommands(process.env.CLIENT_ID, iterator), { body: commands })
+            await rest.put(Routes.applicationGuildCommands(process.env.CLIENT_ID, guildID), { body: commands })
 
-            if (commands.length) console.log('Successfully registered application commands for ' + iterator);
-            else console.log('Successfully deleted application commands for ' + iterator);
+            if (commands.length) console.log('Successfully registered application commands for ' + guildID);
+            else console.log('Successfully deleted application commands for ' + guildID);
             success = true;
 
         } catch (e) {
-            console.error('\x1b[31mMissing access for ' + iterator + '\x1b[0m');
+            console.error('\x1b[31mMissing access for ' + guildID + '\x1b[0m');
+            return false;
         }
- //   }
     return success;
 }
 
@@ -103,6 +101,7 @@ async function registerGlobal(rest, commands) {
 
     } catch (e) {
         console.error('\x1b[31mError registering GLOBAL application commands.\x1b[0m');
+        return false;
     }
     return success;
 }
@@ -115,7 +114,7 @@ export default {
             .addBooleanOption(option => option.setName('all').setDescription('update for all saved guilds'))
             .addStringOption(option => option.setName('id').setDescription('target server id').setMaxLength(20)))
         .addSubcommand(subcommand => subcommand.setName('global').setDescription('updates global application commands'))
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
 
 	async execute(interaction){
 

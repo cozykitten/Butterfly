@@ -19,7 +19,7 @@ export default {
 		if (!JSON.parse(process.env.TRUSTED).includes(interaction.user.id)) return interaction.reply('This command is not available for public usage.');
 
 		if (interaction.options.getInteger('option') === 2) {
-			await interaction.reply({ content: `I'll brb! <:AriliaSALUTE:1021920065802739752>`, ephemeral: true});
+			await interaction.reply({ content: `I'll brb! <:AriliaSALUT:1150822630283292702>`, ephemeral: true});
 			restartApplication(interaction.client);
 			return;
 		}
@@ -29,7 +29,7 @@ export default {
 			.setColor(0xFE676E)
 			.setImage('https://raw.githubusercontent.com/cozykitten/Butterfly/master/data/exit_lowres.jpg');
 		await interaction.reply({ embeds: [embed] });	
-			//await interaction.reply({ content: 'Good night! <:AriliaSLEEP:1038896867305603122>', ephemeral: true});
+			//await interaction.reply({ content: 'Good night! <:AriliaSLEEP:1033353595405488278>', ephemeral: true});
 
 		pm2.connect(function (err) {
 			if (err) {

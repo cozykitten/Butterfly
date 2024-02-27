@@ -3,7 +3,7 @@ import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 export default {
 	data: new SlashCommandBuilder()
 		.setName('ping')
-		.setDescription('ping Kokomi'),
+		.setDescription('check bot latency'),
 	async execute(interaction){
 		
 		const sent = await interaction.reply({ content: 'Pinging...', fetchReply: true, ephemeral: true });

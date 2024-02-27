@@ -17,7 +17,7 @@ async function deleteMessageId(interaction) {
             return interaction.reply({ content: `Deleted message from ${msg.author.username} <:AriliaSALUT:1150822630283292702>`, ephemeral: true });
         }
         else {
-            return interaction.reply({ content: "I can't delete this message.", ephemeral: true })
+            return interaction.reply({ content: "Sorry, I can't delete this message <:AriliaSAD:1211497594493341836>", ephemeral: true })
         }
     } catch (error) {
         return interaction.reply({ content: "Invalid message id.", ephemeral: true })
@@ -119,6 +119,6 @@ export default {
                 await deleteMessageAmountDM(interaction);
             }
         }
-        else return interaction.reply('Specify message ID or amount');
+        else return interaction.reply({ content: 'Specify message ID or amount <:AriliaERROR:963144742718291978>', ephemeral: true });
     }
 }
