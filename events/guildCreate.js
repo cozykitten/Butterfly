@@ -1,5 +1,6 @@
 export default async (guild) => {
 
+    console.log(`\n\x1b[34mJoined new guild ${guild.name} (${guild.id})\x1b[0m`);
     const defaultChannel = guild.systemChannel || guild.channels.cache.find(channel => channel.type === 0 && channel.permissionsFor(guild.members.me).has('SEND_MESSAGES'));
     await defaultChannel.send({
         embeds: [
