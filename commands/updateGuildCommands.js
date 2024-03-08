@@ -119,7 +119,7 @@ export default {
 	async execute(interaction){
 
         //command may only be used by trusted people
-        if (!JSON.parse(process.env.TRUSTED) === interaction.user.id) return interaction.reply('This command is not available for public usage.');
+        if (!JSON.parse(process.env.TRUSTED).includes(interaction.user.id)) return interaction.reply('This command is not available for public usage.');
         
         const rest = new REST({ version: '10' }).setToken(process.env.CLIENT_TOKEN);
 

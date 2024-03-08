@@ -51,10 +51,10 @@ process.on('SIGINT', async () => {
     try {
         await sync(db);
     } catch (error) {
+        console.error(`Error syncing database on SIGINT`, error);
         const home = await client.guilds.fetch(db.HOME);
         const log = await home.channels.fetch(db.LOG);
         await log.send(`Error while syncing the database:\n${error.message}`);
-        console.error(`Error syncing database on SIGINT`, error);
     }
     await client.destroy();
     process.exit();

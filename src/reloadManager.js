@@ -34,6 +34,7 @@ export async function restartApplication(client) {
 	try {
         await sync(db);
     } catch (error) {
+        console.error(`Error syncing database on restart`, error);
         const home = await client.guilds.fetch(db.HOME);
         const log = await home.channels.fetch(db.LOG);
         await log.send(`Error while syncing the database:\n${error.message}`);
