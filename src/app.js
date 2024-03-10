@@ -36,7 +36,7 @@ async function login() {
     try {
         await client.login(process.env.CLIENT_TOKEN);
     } catch (err) {
-        console.error('client login error... retrying in 15 minutes.');
+        console.error('client login error... retrying in 15 minutes.', err);
         setTimeout(login, 900000);
     }
 }
@@ -45,7 +45,7 @@ login();
 
 //manual exit
 process.on('SIGINT', async () => {
-    console.log('exiting -.-');
+    console.log('exiting -.-'); //TODO: cleanup ws subscriptions & close ws
     pm2.disconnect();
     db.lastexit = true;
     try {
