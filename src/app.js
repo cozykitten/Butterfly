@@ -5,6 +5,7 @@ import { env } from "custom-env";
 env();
 import { startup } from './reloadManager.js';
 import { db, sync } from './dbManager.js';
+import { terminateWebsocket } from "./eventSub.js";
 
 
 const myIntents = new IntentsBitField();
@@ -26,7 +27,7 @@ client.once('ready', async () => {
 
 
 //load events and commands
-const eventFiles = fs.readdirSync('./events/').filter(file => file.endsWith('.js'));
+const eventFiles = fs.readdirSync('./events/discord/').filter(file => file.endsWith('.js'));
 const commandFiles = fs.readdirSync('./commands/').filter(file => file.endsWith('.js'));
 await startup(eventFiles, commandFiles, client);
 
@@ -45,7 +46,7 @@ login();
 
 //manual exit
 process.on('SIGINT', async () => {
-    console.log('exiting -.-'); //TODO: cleanup ws subscriptions & close ws
+    console.log('\nexiting -.-'); //TODO: cleanup ws subscriptions & close ws, also in reloadmanager
     pm2.disconnect();
     db.lastexit = true;
     try {
@@ -56,6 +57,8 @@ process.on('SIGINT', async () => {
         const log = await home.channels.fetch(db.LOG);
         await log.send(`Error while syncing the database:\n${error.message}`);
     }
-    await client.destroy();
+    const wspromise = terminateWebsocket();
+    const clientpromise = client.destroy();
+    await Promise.all([wspromise, clientpromise]);
     process.exit();
 });

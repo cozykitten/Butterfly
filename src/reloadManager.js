@@ -1,5 +1,6 @@
 import { Collection } from 'discord.js';
 import { db, sync }from './dbManager.js';
+import { terminateWebsocket } from './eventSub.js';
 import { env } from "custom-env";
 env();
 
@@ -7,7 +8,7 @@ export async function startup(eventFiles, commandFiles, client) {
     
     //event handler
     for (const file of eventFiles) {
-        const event = await import(`../events/${file}`);
+        const event = await import(`../events/discord/${file}`);
         const eventName = file.split('.')[0];
         client.on(eventName, (...args) => event.default(...args, client));
     }
@@ -29,7 +30,7 @@ export async function startup(eventFiles, commandFiles, client) {
 
 export async function restartApplication(client) {
     
-    console.log('restarting application..');
+    console.log('\nrestarting application..');
 	db.lastexit = true;
 	try {
         await sync(db);
@@ -39,6 +40,8 @@ export async function restartApplication(client) {
         const log = await home.channels.fetch(db.LOG);
         await log.send(`Error while syncing the database:\n${error.message}`);
     }
-	await client.destroy();
+	const wspromise = terminateWebsocket();
+    const clientpromise = client.destroy();
+    await Promise.all([wspromise, clientpromise]);
 	process.exit();
 }

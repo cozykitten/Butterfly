@@ -62,7 +62,7 @@ export async function twitch(accessToken, broadcasterId) {
     const followers = await getFollowers(broadcasterId, clientId, accessToken);
     console.log(followers);
 
-    const subs = await getSubscribers(broadcasterId, clientId, process.env.CHANNEL_ACCESS_TOKEN);
+    const subs = await getSubscribers(broadcasterId, clientId, accessToken);
     console.log(subs)
     //filterSubscribersLastWeek(broadcasterId, clientId, accessToken);
 
