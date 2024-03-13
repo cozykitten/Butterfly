@@ -5,7 +5,7 @@ import { env } from "custom-env";
 env();
 import { startup } from './reloadManager.js';
 import { db, sync } from './dbManager.js';
-import { terminateWebsocket } from "./eventSub.js";
+import eventSub from './eventSub.js';
 
 
 const myIntents = new IntentsBitField();
@@ -23,7 +23,8 @@ client.once('ready', async () => {
     console.log(`Environment is ${process.env.APP_ENVIRONMENT}`);
     const onceReady = await import('./onceReady.js');
     onceReady.default(client);
-})
+    eventSub.initialize(client);
+});
 
 
 //load events and commands
@@ -46,7 +47,7 @@ login();
 
 //manual exit
 process.on('SIGINT', async () => {
-    console.log('\nexiting -.-'); //TODO: cleanup ws subscriptions & close ws, also in reloadmanager
+    console.log('\nexiting -.-');
     pm2.disconnect();
     db.lastexit = true;
     try {
@@ -57,7 +58,7 @@ process.on('SIGINT', async () => {
         const log = await home.channels.fetch(db.LOG);
         await log.send(`Error while syncing the database:\n${error.message}`);
     }
-    const wspromise = terminateWebsocket();
+    const wspromise = eventSub.terminate();
     const clientpromise = client.destroy();
     await Promise.all([wspromise, clientpromise]);
     process.exit();
