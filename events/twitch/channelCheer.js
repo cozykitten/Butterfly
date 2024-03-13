@@ -1,6 +1,7 @@
 export default {
     data: {
         type: 'channel.cheer',
+        name: 'bits',
         version: '1',
         condition: {
             broadcaster_user_id: ""
@@ -10,7 +11,6 @@ export default {
         if (event.is_anonymous) return;
 
         return [{
-            eventName: this.data.type,
             timestamp: event.timestamp,
             user: event.user_login,
             amount: event.bits

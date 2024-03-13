@@ -1,6 +1,7 @@
 export default {
     data: {
         type: 'channel.channel_points_custom_reward_redemption.add',
+        name: 'redeem',
         version: '1',
         condition: {
             broadcaster_user_id: "",
@@ -11,7 +12,6 @@ export default {
         if (event.status !== 'fulfilled') return;
 
         return [{
-            eventName: 'channel.redeem',
             timestamp: event.timestamp,
             user: event.user_login,
             title: event.reward.title

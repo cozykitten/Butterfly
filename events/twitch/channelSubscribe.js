@@ -1,6 +1,7 @@
 export default {
     data: {
         type: 'channel.subscribe',
+        name: 'subscribe',
         version: '1',
         condition: {
             broadcaster_user_id: ""
@@ -10,7 +11,6 @@ export default {
         if (event.is_gift) return;
 
         return [{
-            eventName: this.data.type,
             timestamp: event.timestamp,
             user: event.user_login,
             tier: event.tier

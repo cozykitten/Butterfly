@@ -28,48 +28,8 @@ async function checkLastExit(log) {
 
     const embed = new EmbedBuilder()
         .setTitle('crash report')
+        .setDescription('last exit: unplanned')
         .setColor(0xc43838);
-
-    if (!db.lastcall) {
-        embed.data.fields = [{
-            name: 'error',
-            value: 'No last call information available.',
-            inline: true
-        }];
-        return log.send({ content: "last exit: unplanned", embeds: [embed] });
-    }
-
-    if (db.lastcall.subcommand) {
-        embed.data.fields = [{
-            name: 'command',
-            value: db.lastcall.command + ' ' + db.lastcall.subcommand,
-            inline: true
-        }];
-    }
-    else {
-        embed.data.fields = [{
-            name: 'command',
-            value: db.lastcall.command,
-            inline: true
-        }];
-    }
-
-    embed.data.fields.push({
-        name: 'requested by',
-        value: '<@' + db.lastcall.userid + '>',
-        inline: true
-    });
-
-    if (db.lastcall.options) {
-        let options = '';
-        for (const i of db.lastcall.options) {
-            options = options + i.name + ': ' + i.value + '\n';
-        }
-        embed.data.fields.push({
-            name: 'options',
-            value: options
-        });
-    }
-    
-    log.send({ content: "last exit: unplanned", embeds: [embed] });
+        
+    log.send({ embeds: [embed] });
 }

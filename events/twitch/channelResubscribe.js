@@ -1,6 +1,7 @@
 export default {
     data: {
         type: 'channel.subscription.message',
+        name: 'subscribe',
         version: '1',
         condition: {
             broadcaster_user_id: ""
@@ -9,7 +10,6 @@ export default {
     async execute(event) {
 
         return [{
-            eventName: this.data.type,
             timestamp: event.timestamp,
             user: event.user_login,
             tier: event.tier
