@@ -45,3 +45,9 @@ export async function restartApplication(client) {
     await Promise.all([wspromise, clientpromise]);
 	process.exit();
 }
+
+export async function twitchReconnect(client) {
+    await eventSub.terminate();
+    await eventSub.initialize(client);
+    return true;
+}
