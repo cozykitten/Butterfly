@@ -48,9 +48,15 @@ async function initializeEventSub(client) {
     const websocket = new ESWebsocket(wsEndpoint, subEndpoint, auth);
     await websocket.createWebsocket();
 
-    /** TODO (also look for other todo)
-     * which elements dont show under which circumstances, evtl include as reply during some setup command?
-     * also jsdoc for every event file, include renaming hint in the file of redeems
+    /**
+     * Handles every subscribed event on trigger, saves it and sends a notification.
+     * 
+     * Cheer event isn't processed if anonymous.
+     * Subscribe event isn't processed if the sub was gifted.
+     * Resubscribe event isn't triggered when user doesn't send a message.
+     * Giftsub event isn't processed if anonymous.
+     * 
+     * Redeem events are both saved under the same eventName that's different from their actual type.
      */
     websocket.emitter.on('notification', async (payload) => {
         const e = await websocket.subscriptions[payload.subscription.type].execute(payload.event);
@@ -60,11 +66,24 @@ async function initializeEventSub(client) {
             sendDiscordMessage(e[1], client);
         }
     });
+
+    websocket.emitter.on('disconnect', async (code) => {
+        const home = client.guilds.cache.get(db.HOME);
+        const log = home.channels.cache.get(db.LOG);
+        log.send(`Twitch websocket: connection was closed  ${code}`);
+    });
     return websocket;
 }
 
 async function sendDiscordMessage(embed, client) {
-    const guild = client.guilds.cache.get(JSON.parse(process.env.GUILD_ID)[0]); //change on production
-    const channel = guild.channels.cache.get(db[guild.id].eventSub);
-    await channel.send({ embeds: [embed], flags: 4096 });
+    try {
+        const guild = client.guilds.cache.get(JSON.parse(process.env.GUILD_ID)[0]); //change on production
+        const channel = guild.channels.cache.get(db[guild.id].eventSub);
+        await channel.send({ embeds: [embed], flags: 4096 });
+    } catch (err) {
+        console.error(`Error sending eventSub event to ${channel.name}:`, err);
+        const home = await client.guilds.cache.get(db.HOME);
+        const log = await home.channels.cache.get(db.LOG);
+        log.send(`Error sending eventSub event to ${channel.name}: ${err.message}`);
+    }
 }
