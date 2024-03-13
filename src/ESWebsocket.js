@@ -9,7 +9,8 @@ export default class ESWebsocket {
     #isReconnecting = false;
     #messageIDs = new Array(10);
     #messageIDsIndex = 0;
-    #connections = [];
+    #connections = new Set();
+    #cleanupPromises = new Map();
     #keepaliveTimer;
     #wsEndpoint;
     #subEndpoint;
@@ -32,8 +33,6 @@ export default class ESWebsocket {
 
     /**
      * Initializes the Webocket connection to Twitch's EventSub system.
-     * This method is asynchronous and returns an EventEmitter instance that can be used to listen for events.
-     * 
      * @throws {Error} If an error occurs during the WebSocket connection or event subscription process.
      */
     async createWebsocket() {
@@ -49,7 +48,10 @@ export default class ESWebsocket {
         for (const connection of this.#connections) {
             connection.close(1000);
         }
-        this.#connections = [];
+        await new Promise(resolve => setTimeout(resolve, 500)); //TODO actually solve this issue
+        await Promise.all(Array.from(this.#cleanupPromises.values()));
+        this.#connections.clear();
+        this.#cleanupPromises.clear();
     }
 
     async #readEvents() {
@@ -70,8 +72,8 @@ export default class ESWebsocket {
             console.log('\n\x1b[33mTwitch websocket: timeout\x1b[0m');
             this.#isReconnecting;
             ws.close(4005);
-            const i = this.#connections.indexOf(ws);
-            this.#connections.splice(i, 1);
+            this.#connections.delete(ws);
+            this.#cleanupPromises.delete(ws);
             console.log('reconnecting...');
             this.#connect(); //TODO: what if connection is down for a few minutes?
         }, 15000);
@@ -89,21 +91,25 @@ export default class ESWebsocket {
         ws.once('open', () => {
             console.log('\n\x1b[34mTwitch websocket: connected\x1b[0m');
             this.#resetKeepaliveTimer(ws);
-            this.#connections.push(ws);
+            this.#connections.add(ws);
         });
 
         ws.once('close', async (code) => {
-            if (!this.#isReconnecting) {
-                clearTimeout(this.#keepaliveTimer);
-                for (const eventName in this.subscriptions) {
-                    const cleared = await this.#unsubscribe(this.subscriptions[eventName].data.id);
-                    if (cleared) console.log(`Deleted subscription to event: ${eventName}`);
+
+            const cleanupPromise = (async () => {
+                if (!this.#isReconnecting && ws.sessionId) {
+                    clearTimeout(this.#keepaliveTimer);
+                    for (const eventName in this.subscriptions) {
+                        const cleared = await this.#unsubscribe(this.subscriptions[eventName].data.id);
+                        if (cleared) console.log(`Deleted subscription to event: ${eventName}`);
+                    }
                 }
-            }
-            this.#isReconnecting = false;
-            ws.removeAllListeners();
-            console.log(`\x1b[33mTwitch websocket ${ws.sessionId}: disconnected (${code})\x1b[0m`);
-            //TODO: send notification to discord channel with code if code is >= 4000, aka emit new event
+                this.#isReconnecting = false;
+                ws.removeAllListeners();
+                console.log(`\x1b[33mTwitch websocket ${ws.sessionId}: disconnected (${code})\x1b[0m`);
+            })();
+            
+            this.#cleanupPromises.set(ws, cleanupPromise);
             if (code >= 4000) this.emitter.emit('disconnect', code);
         });
 
@@ -116,8 +122,8 @@ export default class ESWebsocket {
         ws.on('error', (error) => {
             console.error('\x1b[31mTwitch websocket error:\x1b[0m', error);
             ws.close(4006);
-            const i = this.#connections.indexOf(ws);
-            this.#connections.splice(i, 1);
+            this.#connections.delete(ws);
+            this.#cleanupPromises.delete(ws);
 
             //TODO: test this later, retry interval and time to wait for connection, etc
             setTimeout(this.#connect, 900000);
@@ -148,8 +154,11 @@ export default class ESWebsocket {
                 ws.sessionId = message.payload.session.id;
                 console.log(`Websocket ID: ${ws.sessionId}\n`);
 
-                if (this.#connections.length > 1) {
-                    this.#connections.shift().close(1000);
+                if (this.#connections.size > 1) {
+                    const ws = this.#connections.values().next().value;
+                    ws.close(1000);
+                    this.#connections.delete(ws);
+                    this.#cleanupPromises.delete(ws);
                     return;
                 }
 
