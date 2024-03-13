@@ -18,7 +18,7 @@ export default {
         },
         {
             title: 'New Redeem',
-            description: `**User:** ${event.user_login}\n
+            description: `**User:** ${event.user_login}
             **Redeem:** ${event.reward.title}`,
             color: 16672622
         }];

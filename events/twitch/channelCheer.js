@@ -17,7 +17,7 @@ export default {
         },
         {
             title: 'Bits',
-            description: `**User:** ${event.user_login}\n
+            description: `**User:** ${event.user_login}
             **amount:** ${event.bits}`,
             color: 16672622
         }];

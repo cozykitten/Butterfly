@@ -7,10 +7,10 @@ export default {
         }
     },
     async execute(event) {
-        if (!event.is_anonymous) return;
+        if (event.is_anonymous) return;
 
-        const description = `**User:** ${event.user_login}\n
-        **amount:** ${event.total}\n
+        const description = `**User:** ${event.user_login}
+        **amount:** ${event.total}
         **tier:** ${event.tier}`;
         
         return [{

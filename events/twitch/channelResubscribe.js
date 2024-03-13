@@ -16,7 +16,7 @@ export default {
         },
         {
             title: 'Resub',
-            description: `**User:** ${event.user_login}\n
+            description: `**User:** ${event.user_login}
             **tier:** ${event.tier}`,
             color: 16672622
         }];

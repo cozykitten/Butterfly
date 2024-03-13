@@ -10,11 +10,15 @@ export default {
         const subs = event.top_contributions.find(contribution => contribution.type === 'subscription');
         const bits = event.top_contributions.find(contribution => contribution.type === 'bits');
 
-        const description = `**Level:** ${event.level}\n
-        **Most Bits donated:** ${bits.user_login}\n
-        **Bits count:** ${bits.total}\n
-        **Most Subs gifted:** ${subs.user_login}\n
-        **Subs count:** ${subs.total}`;
+        let description = `**Level:** ${event.level}`
+        if (subs) {
+            description += `\n**Most Subs gifted:** ${subs.user_login}
+            **Subs count:** ${subs.total}`;
+        }
+        if (bits) {
+            description += `\n**Most Bits donated:** ${bits.user_login}
+            **Bits count:** ${bits.total}`
+        }
 
         return [
             {
