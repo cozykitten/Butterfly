@@ -32,9 +32,9 @@ export default {
             return interaction.reply({ content: "Thamks <:AriliaFLOWER:1211088057260974181>", ephemeral: true });
         } catch (err) {
             console.error(`Error sending twitch clip to ${channel.name}:`, err);
-            const guild = await interaction.client.guilds.cache.get(db.HOME);
-            const log = await guild.channels.cache.get(db.LOG);
-            log.send(`Error sending twitch clip to ${channel.name}:`, err);
+            const home = await interaction.client.guilds.cache.get(db.HOME);
+            const log = await home.channels.cache.get(db.LOG);
+            log.send(`Error sending twitch clip to ${channel.name}:`);
             return interaction.reply({ content: "I can't access this channel, please bug Crup about it.", ephemeral: true });
         }
     }
