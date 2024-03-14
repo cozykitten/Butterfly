@@ -10,7 +10,6 @@ export default class ESWebsocket {
     #messageIDs = new Array(10);
     #messageIDsIndex = 0;
     #connections = new Set();
-    #cleanupPromises = new Map();
     #keepaliveTimer;
     #wsEndpoint;
     #subEndpoint;
@@ -42,16 +41,32 @@ export default class ESWebsocket {
     }
 
     /**
-     * Closes the Websocket connection, unregisters from all events and removes all eventlisteners on this instance.
+     * Closes all Websocket connections, unregisters from all events and removes all eventlisteners on this instance.
      */
-    async close() {
+    async terminate() {
         for (const connection of this.#connections) {
-            connection.close(1000);
+            await this.#close(connection);
         }
-        await new Promise(resolve => setTimeout(resolve, 500)); //TODO actually solve this issue
-        await Promise.all(Array.from(this.#cleanupPromises.values()));
         this.#connections.clear();
-        this.#cleanupPromises.clear();
+        this.emitter.removeAllListeners();
+        this.emitter = this.subscriptions = null;
+    }
+
+    /**
+     * Closes the specified connection and removes eventlisteners.
+     * Unregisters from events if not reconnecting.
+     * @param {WebSocket} connection The connection to close.
+     */
+    async #close(connection, code = 1000) {
+        if (!this.#isReconnecting && connection.sessionId) {
+            clearTimeout(this.#keepaliveTimer);
+            for (const eventName in this.subscriptions) {
+                const cleared = await this.#unsubscribe(this.subscriptions[eventName].data.id);
+                if (cleared) console.log(`Deleted subscription to event: ${eventName}`);
+            }
+        }
+        this.#isReconnecting = false;
+        connection.close(code);
     }
 
     async #readEvents() {
@@ -71,9 +86,8 @@ export default class ESWebsocket {
         this.#keepaliveTimer = setTimeout(() => {
             console.log('\n\x1b[33mTwitch websocket: timeout\x1b[0m');
             this.#isReconnecting;
-            ws.close(4005);
+            this.#close(ws, 4005);
             this.#connections.delete(ws);
-            this.#cleanupPromises.delete(ws);
             console.log('reconnecting...');
             this.#connect(); //TODO: what if connection is down for a few minutes?
         }, 15000);
@@ -95,22 +109,9 @@ export default class ESWebsocket {
         });
 
         ws.once('close', async (code) => {
-
-            const cleanupPromise = (async () => {
-                if (!this.#isReconnecting && ws.sessionId) {
-                    clearTimeout(this.#keepaliveTimer);
-                    for (const eventName in this.subscriptions) {
-                        const cleared = await this.#unsubscribe(this.subscriptions[eventName].data.id);
-                        if (cleared) console.log(`Deleted subscription to event: ${eventName}`);
-                    }
-                }
-                this.#isReconnecting = false;
-                ws.removeAllListeners();
-                console.log(`\x1b[33mTwitch websocket ${ws.sessionId}: disconnected (${code})\x1b[0m`);
-            })();
-            
-            this.#cleanupPromises.set(ws, cleanupPromise);
+            ws.removeAllListeners();
             if (code >= 4000) this.emitter.emit('disconnect', code);
+            console.log(`\x1b[33mTwitch websocket ${ws.sessionId}: disconnected (${code})\x1b[0m`);
         });
 
         /**
@@ -121,9 +122,8 @@ export default class ESWebsocket {
          */
         ws.on('error', (error) => {
             console.error('\x1b[31mTwitch websocket error:\x1b[0m', error);
-            ws.close(4006);
+            this.#close(ws, 4006);
             this.#connections.delete(ws);
-            this.#cleanupPromises.delete(ws);
 
             //TODO: test this later, retry interval and time to wait for connection, etc
             setTimeout(this.#connect, 900000);
@@ -156,9 +156,8 @@ export default class ESWebsocket {
 
                 if (this.#connections.size > 1) {
                     const ws = this.#connections.values().next().value;
-                    ws.close(1000);
+                    this.#close(ws);
                     this.#connections.delete(ws);
-                    this.#cleanupPromises.delete(ws);
                     return;
                 }
 

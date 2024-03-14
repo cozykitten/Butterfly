@@ -23,8 +23,7 @@ export default {
      */
     async terminate() {
         if (!active) return;
-        websocket.emitter.removeAllListeners();
-        await websocket.close();
+        await websocket.terminate();
     }
 }
 
