@@ -58,6 +58,7 @@ async function getEmbed(eventName, months) {
     const embed = new EmbedBuilder()
         .setTitle(`Event data for ${eventName} event`)
         .setColor(0xFE676E)
+        .setDescription(months[2])
         .setFields(
             { name: monthNames[eventList[0].month], value: lastMonthField, inline: true },
             { name: monthNames[eventList[1].month], value: currentMonthField, inline: true }
@@ -93,20 +94,23 @@ async function getEvent(eventName) {
             data: eventList[1].events.hasOwnProperty(eventName) ? eventList[1].events[eventName].length : 0
         }
     }
+    let description = null;
 
     switch (eventName) {
-
         case "follow":
             break;
         case "subscribe":
+            description = "\`\`Note: Subscribe event isn't processed if the sub was gifted.\`\`"
             if (eventList[0].events.hasOwnProperty(eventName)) await countSubTiers(eventName, 0, lastMonth);
             if (eventList[1].events.hasOwnProperty(eventName)) await countSubTiers(eventName, 1, currentMonth);
             break;
         case "giftSub":
+            description = "\`\`Note: Giftsub event isn't processed if anonymous.\`\`"
             if (eventList[0].events.hasOwnProperty(eventName)) await countSubTiers(eventName, 0, lastMonth, true);
             if (eventList[1].events.hasOwnProperty(eventName)) await countSubTiers(eventName, 1, currentMonth, true);
             break;
-        case "cheer":
+        case "bits":
+            description = "\`\`Note: Bits event isn't processed if anonymous.\`\`";
             if (eventList[0].events.hasOwnProperty(eventName)) await countBits(eventName, 0, lastMonth);
             if (eventList[1].events.hasOwnProperty(eventName)) await countBits(eventName, 1, currentMonth);
             break;
@@ -121,7 +125,7 @@ async function getEvent(eventName) {
         default:
             break;
     }
-    return [lastMonth, currentMonth];
+    return [lastMonth, currentMonth, description];
 }
 
 /**
