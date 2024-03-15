@@ -60,10 +60,10 @@ export default class ESWebsocket {
     async #close(connection, code = 1000) {
         if (!this.#isReconnecting && connection.sessionId) {
             clearTimeout(this.#keepaliveTimer);
-            for (const eventName in this.subscriptions) {
+            /*for (const eventName in this.subscriptions) {
                 const cleared = await this.#unsubscribe(this.subscriptions[eventName].data.id);
                 if (cleared) console.log(`Deleted subscription to event: ${eventName}`);
-            }
+            }*/ //no need to cleanup past subscriptions, twitch automatically disables those
         }
         this.#isReconnecting = false;
         connection.close(code);
@@ -161,7 +161,7 @@ export default class ESWebsocket {
                     return;
                 }
 
-                await this.#removeExistingSubscriptions();
+                //await this.#removeExistingSubscriptions(); //no need to cleanup past subscriptions, twitch automatically disables those
                 await this.#registerSubscriptions(ws.sessionId);
             }
             else if (message.metadata.message_type === 'revocation') {
@@ -169,8 +169,8 @@ export default class ESWebsocket {
                 const type = message.payload.subscription.type;
                 console.warn(`\n\x1b[31mTwitch websocket: subscription ${type} revoked for reason ${reason}\x1b[0m`);
 
-                const cleared = await this.#unsubscribe(this.subscriptions[type].data.id);
-                if (cleared) console.log(`Deleted subscription to event: ${type}`);
+                /*const cleared = await this.#unsubscribe(this.subscriptions[type].data.id);
+                if (cleared) console.log(`Deleted subscription to event: ${type}`);*/ //no need to cleanup past subscriptions, twitch automatically disables those
             }
         });
     }
