@@ -11,7 +11,7 @@ export default {
         .setDescription('commands related to twitch')
         .addSubcommand(subcommand => subcommand.setName('reconnect').setDescription('reconnect to EventSub API'))
         .addSubcommand(subcommand => subcommand.setName('events').setDescription('get your saved event data')
-            .addStringOption(option => option.setName('eventname').setDescription('event type')
+            .addStringOption(option => option.setName('eventname').setDescription('event type').setRequired(true)
                 .addChoices(
                     { name: 'Follow', value: 'follow' },
                     { name: 'Subscribe', value: 'subscribe' },
@@ -19,8 +19,7 @@ export default {
                     { name: 'Bits', value: 'bits' },
                     { name: 'Hypetrain', value: 'hypetrain' },
                     { name: 'Redeem', value: 'redeem' }
-                ))
-            .addStringOption(option => option.setName('user').setDescription('twitch username'))) //tolowercase
+                )))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
 
     async execute(interaction) {
@@ -35,17 +34,9 @@ export default {
 
         if (interaction.options.getSubcommand() === 'events') {
             const eventName = interaction.options.getString('eventname');
-            if (eventName) {
-                const months = await getEvent(eventName);
-                const embed = await getEmbed(eventName, months);
-                interaction.reply({ embeds: [embed], ephemeral: true });
-            }
-            else if (interaction.options.getString('user')) {
-                getEventsUser(interaction.options.getString('user'));
-            }
-            else {
-                getAllEvents();
-            }
+            const months = await getEvent(eventName);
+            const embed = await getEmbed(eventName, months);
+            interaction.reply({ embeds: [embed], ephemeral: true });
         }
     }
 }
