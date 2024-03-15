@@ -191,7 +191,7 @@ export default class ESWebsocket {
 
     async #removeExistingSubscriptions() {
         const subList = await this.#getSubscriptions();
-        if (subList.length > 0) {
+        if (subList && subList.length > 0) {
             for (const sub of subList) {
                 const cleared = await this.#unsubscribe(sub.id);
                 if (cleared) console.log(`\x1b[33mRemoved existing subscription: ${sub.type}\x1b[0m`);
@@ -206,7 +206,7 @@ export default class ESWebsocket {
      * @returns {Promise<Array<Object>|boolean} A promise that resolves to a list of registered subscription objects if successful, or false if an error occurs.
      * @throws {Error} If the request was denied for some reason.
      */
-    async #getSubscriptions() {
+    async #getSubscriptions(retry = false) {
         try {
             const response = await fetch(this.#subEndpoint, {
                 method: 'GET',
@@ -221,9 +221,10 @@ export default class ESWebsocket {
                 return data.data;
             }
             if (response.status === 401) {
+                if (retry) throw new Error('401 Unauthorized');
                 console.warn(`\x1b[31mTwitch websocket: 401 Unauthorized \x1b[0m`);
                 const token = await this.#auth.refreshUserAccessToken();
-                if (token) return await this.#getSubscriptions();
+                if (token) return await this.#getSubscriptions(true);
             }
             throw new Error(`Failed to get existing subscriptions: ${response.statusText}`);
         } catch (e) {
@@ -244,7 +245,7 @@ export default class ESWebsocket {
      * @example
      * const channelOnlineID = await subscribe('12345', 'channel.online', '1', {broadcaster_user_id:"123456789"});
      */
-    async #subscribe(websocketID, type, version, condition) {
+    async #subscribe(websocketID, type, version, condition, retry = false) {
         const body = {
             type: type,
             version: version,
@@ -268,15 +269,14 @@ export default class ESWebsocket {
                 return data.data[0].id;
             }
             if (response.status === 401) {
+                if (retry) throw new Error('401 Unauthorized');
                 console.warn(`\x1b[31mTwitch websocket: 401 Unauthorized \x1b[0m`);
                 const token = await this.#auth.refreshUserAccessToken();
-                if (token) return await this.#subscribe(websocketID, type, version, condition);
+                if (token) return await this.#subscribe(websocketID, type, version, condition, true);
             }
             const errorData = await response.json();
             console.error('Error creating subscription:', errorData);
             return false;
-
-            
         } catch (e) {
             console.error(`Error subscribing to event: ${type}`, e);
             return false;
@@ -288,9 +288,8 @@ export default class ESWebsocket {
      *
      * @param {string} idString - The ID of the subscription to unsubscribe from.
      * @returns {Promise<boolean>} A promise that resolves to true if the unsubscription is successful, or false if an error occurs.
-     * @throws {Error} If an error occurs during the unsubscription process.
      */
-    async #unsubscribe(idString) {
+    async #unsubscribe(idString, retry = false) {
         try {
             const response = await fetch(`${this.#subEndpoint}?id=${idString}`, {
                 method: 'DELETE',
@@ -304,11 +303,14 @@ export default class ESWebsocket {
                 return true;
             }
             if (response.status === 401) {
+                if (retry) throw new Error('401 Unauthorized');
                 console.warn(`\x1b[31mTwitch websocket: 401 Unauthorized \x1b[0m`);
                 const token = await this.#auth.refreshUserAccessToken();
-                if (token) return await this.#unsubscribe(idString);
+                if (token) return await this.#unsubscribe(idString, true);
             }
-            throw new Error(`Failed to unsubscribe from event: ${JSON.stringify(response)}`);
+            const errorData = await response.json();
+            console.error('Failed to unsubscribe from event:', errorData);
+            return false;
         } catch (e) {
             console.error(`Error unsubscribing from event: ${e}`);
             return false;

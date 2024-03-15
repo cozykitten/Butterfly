@@ -1,6 +1,6 @@
 import { Collection } from 'discord.js';
 import { db, sync }from './dbManager.js';
-import eventSub from './eventSub.js';
+import eventSub from './twitchAPI.js';
 import { env } from "custom-env";
 env();
 

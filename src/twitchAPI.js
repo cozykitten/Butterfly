@@ -27,6 +27,100 @@ export default {
     }
 }
 
+/**
+ * Retrieves follower data from the Twitch API up to a specified end date.
+ *
+ * @param {number} endTime - The end timestamp up to which follower data should be retrieved.
+ * @returns {Promise<Array>} An array of follower objects.
+ * @throws {Error} If the fetch operation fails or if the access token refresh fails after a 401 Unauthorized status.
+ * @example
+ * getFollowers(1710538298301)
+ */
+export async function getFollowers(endTime) {
+    const url = new URL('https://api.twitch.tv/helix/channels/followers');
+    url.searchParams.append('broadcaster_id', auth.broadcasterId);
+    url.searchParams.append('first', '100');
+
+    const followers = [];
+    let cursor = null;
+
+    do {
+        if (cursor) url.searchParams.append('after', cursor);
+        try {
+            const data = await fetchTwitch(url, headers);
+            if (data.data.length > 0 && new Date(data.data[data.data.length - 1].followed_at) < new Date(endTime)) {
+                for (const follower of data.data) {
+                    if (new Date(follower.followed_at) > new Date(endTime)) return followers;
+                    followers.push(follower);
+                }
+            }
+            else followers.push(...data.data);
+            cursor = data.pagination?.cursor;
+        } catch (error) {
+            throw error;
+        }
+    } while (cursor);
+    return followers;
+}
+
+/**
+ * Retrieves clips from Twitch API within a specified time range.
+ * 
+ * @param {number} startTime - The start timestamp for the clips.
+ * @param {number} endTime - The end time for the clips.
+ * @returns {Promise<string[]>} A promise that resolves to an array of clip URLs.
+ * @throws {Error} If the fetch operation fails or if the access token refresh fails after a 401 Unauthorized status.
+ * @example
+ * getClips(Date.now(), 1710538298301)
+ */
+export async function getClips(startTime, endTime) {
+    const url = new URL('https://api.twitch.tv/helix/clips');
+    url.searchParams.append('broadcaster_id', auth.broadcasterId);
+    url.searchParams.append('started_at', new Date(startTime).toISOString);
+    url.searchParams.append('ended_at', new Date(endTime).toISOString);
+    url.searchParams.append('first', '100');
+
+    let clips = [];
+    let cursor = null;
+
+    do {
+        if (cursor) url.searchParams.append('after', cursor);
+        try {
+            const data = await fetchTwitch(url);
+            clips.push(data.data.map(clip => clip.url));
+            cursor = data.pagination?.cursor;
+        }
+        catch (error) {
+            throw error;
+        }
+    } while (cursor);
+    return clips;
+}
+
+/**
+ * @param {string} url Endpoint with params.
+ * @returns {Promise<any>} response in json format.
+ * @throws {Error} If the fetch operation fails or if the access token refresh fails after a 401 Unauthorized status.
+ */
+async function fetchTwitch(url) {
+    let retry = false;
+    do {
+        const headers = {
+            'Client-Id': auth.clientId,
+            'Authorization': `Bearer ${auth.accessToken}`
+        };
+        const response = await fetch(url, { headers });
+        if (response.ok) return await response.json();
+        if (response.status === 401) {
+            if (retry) throw new Error('401 Unauthorized');
+            console.warn(`\x1b[31mTwitch API: 401 Unauthorized \x1b[0m`);
+            const token = await auth.refreshUserAccessToken();
+            if (token) retry = true;
+        } else throw new Error(`Failed to fetch from twitch API: ${response.statusText}`);
+    } while(retry);
+}
+
+
 async function initializeEventSub(client) {
 
     await shiftEventList();

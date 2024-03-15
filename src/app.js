@@ -5,7 +5,7 @@ import { env } from "custom-env";
 env();
 import { startup } from './reloadManager.js';
 import { db, sync } from './dbManager.js';
-import eventSub from './eventSub.js';
+import eventSub from './twitchAPI.js';
 
 
 const myIntents = new IntentsBitField();
