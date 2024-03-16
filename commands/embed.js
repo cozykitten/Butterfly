@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
-import { db, sync } from '../src/dbManager.js';
+import { db, sync } from '../src/utils/dbManager.js';
 
 function createEmbed(interaction) {
 

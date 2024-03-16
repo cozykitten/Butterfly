@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ButtonStyle, ActionRowBuilder, ButtonBuilder } from 'discord.js';
-import { twitchReconnect } from '../src/reloadManager.js';
-import { eventList } from '../src/dbManager.js';
-import { getClips, getFollowers } from '../src/twitchAPI.js';
+import { twitchReconnect } from '../src/utils/reloadManager.js';
+import { eventList } from '../src/utils/dbManager.js';
+import { getClips, getFollowers } from '../src/utils/twitchAPI.js';
 import { env } from "custom-env";
 env();
 

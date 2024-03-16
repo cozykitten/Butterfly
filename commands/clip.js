@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { db } from '../src/dbManager.js';
+import { db } from '../src/utils/dbManager.js';
 import { env } from "custom-env";
 env();
 

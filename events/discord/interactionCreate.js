@@ -1,5 +1,3 @@
-import { db, sync } from '../../src/dbManager.js';
-
 export default async (interaction) => {
 
 	if (!interaction.isChatInputCommand()) return;

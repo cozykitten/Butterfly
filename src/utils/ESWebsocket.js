@@ -74,7 +74,7 @@ export default class ESWebsocket {
         const eventFiles = twitchEventFiles.filter(file => file.endsWith('.js'));
         const subscriptions = {};
         for (const file of eventFiles) {
-            const event = await import(`../events/twitch/${file}`);
+            const event = await import(`.../events/twitch/${file}`);
             const eventName = event.default.data.type;
             subscriptions[eventName] = event.default;
         }

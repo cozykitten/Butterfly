@@ -3,9 +3,9 @@ import pm2 from 'pm2';
 import fs from 'fs';
 import { env } from "custom-env";
 env();
-import { startup } from './reloadManager.js';
-import { db, sync } from './dbManager.js';
-import eventSub from './twitchAPI.js';
+import { startup } from './utils/reloadManager.js';
+import { db, sync } from './utils/dbManager.js';
+import eventSub from './utils/twitchAPI.js';
 
 
 const myIntents = new IntentsBitField();
@@ -21,7 +21,7 @@ const client = new Client({ intents: myIntents });
 client.once('ready', async () => {
     console.log(`\n\x1b[34mClient has logged in as ${client.user.tag}\x1b[0m`);
     console.log(`Environment is ${process.env.APP_ENVIRONMENT}`);
-    const onceReady = await import('./onceReady.js');
+    const onceReady = await import('./utils/onceReady.js');
     onceReady.default(client);
     eventSub.initialize(client);
 });

@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
 import { env } from "custom-env";
 env();
-import { restartApplication } from '../src/reloadManager.js';
+import { restartApplication } from '../src/utils/reloadManager.js';
 import pm2 from 'pm2';
 
 
