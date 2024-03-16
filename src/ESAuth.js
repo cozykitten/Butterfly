@@ -44,6 +44,7 @@ export default class ESAuth {
                 body: params
             });
             const data = await response.json();
+            if (!response.ok) throw new Error(`Refreshing User Access Token failed: ${data.message}`);
             this.accessToken = data.access_token;
             this.#refreshToken = data.refresh_token;
             db.eventSub.accessToken = data.access_token;
@@ -51,8 +52,7 @@ export default class ESAuth {
             sync(db);
             return data.access_token;
         } catch (error) {
-            console.error(`Error refreshing User Access Token: ${error}`);
-            return false;
+            throw error;
         }
     }
 }

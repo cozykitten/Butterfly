@@ -13,7 +13,7 @@ const authEndpoint = 'https://id.twitch.tv/oauth2/token';
  * @param {string} redirectUrl The registered redirect url of your app.
  * @throws {Error} If an error occurs during the request.
  */
-export async function getUserAccessToken(clientId, clientSecret, authCode, redirectUrl) {
+async function getUserAccessToken(clientId, clientSecret, authCode, redirectUrl) {
     const params = new URLSearchParams();
     params.append('client_id', clientId);
     params.append('client_secret', clientSecret);
@@ -33,7 +33,7 @@ export async function getUserAccessToken(clientId, clientSecret, authCode, redir
         // sync(db);
         return data;
     } catch (error) {
-        console.error(`Error fetching User Access Token: ${error}`);
+        console.error('Error fetching User Access Token:', error);
         throw error;
     }
 }
@@ -56,8 +56,8 @@ async function getAppAccessToken(clientId, clientSecret) {
         const data = await response.json();
         //if using this methodas part of twitch modules, implement storage of the token
         return data.access_token;
-    } catch (e) {
-        console.error('Error fetching App Access Token:', e);
+    } catch (error) {
+        console.error('Error fetching App Access Token:', error);
         return false;
     }
 }
@@ -76,7 +76,7 @@ async function getTwitchBroadcasterId(clientId, accessToken, username) {
         const data = await response.json();
         return data.data[0].id;
     } catch (error) {
-        console.error(`Error fetching Twitch broadcaster id: ${error}`);
+        console.error('Error fetching Twitch broadcaster id:', error);
         return false;
     }
 }
@@ -84,11 +84,11 @@ async function getTwitchBroadcasterId(clientId, accessToken, username) {
 const authCode = '';
 const username = '';
 
-const data = getUserAccessToken(process.env.TWITCH_ID, process.env.TWITCH_SECRET, authCode, process.env.TWITCH_REDIRECT);
+const data = await getUserAccessToken(process.env.TWITCH_ID, process.env.TWITCH_SECRET, authCode, process.env.TWITCH_REDIRECT);
 db.eventSub.accessToken = data.access_token;
 db.eventSub.refreshToken = data.refresh_token;
 
-const appAccessToken = getAppAccessToken(process.env.TWITCH_ID, process.env.TWITCH_SECRET);
+const appAccessToken = await getAppAccessToken(process.env.TWITCH_ID, process.env.TWITCH_SECRET);
 const broadcasterId = await getTwitchBroadcasterId(process.env.TWITCH_ID, appAccessToken, username);
 db.eventSub.broadcasterId = broadcasterId;
 

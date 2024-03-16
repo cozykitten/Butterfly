@@ -228,7 +228,7 @@ export default class ESWebsocket {
             }
             throw new Error(`Failed to get existing subscriptions: ${response.statusText}`);
         } catch (e) {
-            console.error(`Error getting existing subscriptions: ${e}`);
+            console.error('Error getting existing subscriptions:', e);
             return false;
         }
     }
@@ -312,7 +312,7 @@ export default class ESWebsocket {
             console.error('Failed to unsubscribe from event:', errorData);
             return false;
         } catch (e) {
-            console.error(`Error unsubscribing from event: ${e}`);
+            console.error('Error unsubscribing from event:', e);
             return false;
         }
     }
