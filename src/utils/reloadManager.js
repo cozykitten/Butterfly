@@ -8,7 +8,7 @@ export async function startup(eventFiles, commandFiles, client) {
     
     //event handler
     for (const file of eventFiles) {
-        const event = await import(`.../events/discord/${file}`);
+        const event = await import(`../../events/discord/${file}`);
         const eventName = file.split('.')[0];
         client.on(eventName, (...args) => event.default(...args, client));
     }
@@ -17,7 +17,7 @@ export async function startup(eventFiles, commandFiles, client) {
     client.commands = new Collection();
 
     for (const file of commandFiles) {
-        const command = await import(`.../commands/${file}`);
+        const command = await import(`../../commands/${file}`);
         if (command.default.data && command.default.data.name) {
             client.commands.set(command.default.data.name, command.default);
             console.log('loading ' + file);
