@@ -41,43 +41,43 @@ export async function getFollowers(endTime) {
     url.searchParams.append('broadcaster_id', auth.broadcasterId);
     url.searchParams.append('first', '100');
 
-    const followers = [];
+    //const followers = [];
+    let followerCount = 0;
     let cursor = null;
 
     do {
         if (cursor) url.searchParams.append('after', cursor);
         try {
-            const data = await fetchTwitch(url, headers);
+            const data = await fetchTwitch(url);
             if (data.data.length > 0 && new Date(data.data[data.data.length - 1].followed_at) < new Date(endTime)) {
                 for (const follower of data.data) {
-                    if (new Date(follower.followed_at) > new Date(endTime)) return followers;
-                    followers.push(follower);
+                    if (new Date(follower.followed_at) < new Date(endTime)) return followerCount//followers;
+                    followerCount++ //followers.push(follower);
                 }
             }
-            else followers.push(...data.data);
+            else followerCount += data.data.length//followers.push(...data.data);
             cursor = data.pagination?.cursor;
         } catch (error) {
             throw error;
         }
     } while (cursor);
-    return followers;
+    return followerCount//followers;
 }
 
 /**
  * Retrieves clips from Twitch API within a specified time range.
  * 
- * @param {number} startTime - The start timestamp for the clips.
  * @param {number} endTime - The end time for the clips.
  * @returns {Promise<string[]>} A promise that resolves to an array of clip URLs.
  * @throws {Error} If the fetch operation fails or if the access token refresh fails after a 401 Unauthorized status.
  * @example
- * getClips(Date.now(), 1710538298301)
+ * getClips(1710538298301)
  */
-export async function getClips(startTime, endTime) {
+export async function getClips(endTime) {
     const url = new URL('https://api.twitch.tv/helix/clips');
     url.searchParams.append('broadcaster_id', auth.broadcasterId);
-    url.searchParams.append('started_at', new Date(startTime).toISOString);
-    url.searchParams.append('ended_at', new Date(endTime).toISOString);
+    url.searchParams.append('started_at', new Date(Date.now()).toISOString());
+    url.searchParams.append('ended_at', new Date(endTime).toISOString());
     url.searchParams.append('first', '100');
 
     let clips = [];
@@ -87,7 +87,7 @@ export async function getClips(startTime, endTime) {
         if (cursor) url.searchParams.append('after', cursor);
         try {
             const data = await fetchTwitch(url);
-            clips.push(data.data.map(clip => clip.url));
+            clips.push(...data.data.map(clip => clip.url));
             cursor = data.pagination?.cursor;
         }
         catch (error) {

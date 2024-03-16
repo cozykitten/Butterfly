@@ -1,6 +1,7 @@
-import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ButtonStyle, ActionRowBuilder, ButtonBuilder } from 'discord.js';
 import { twitchReconnect } from '../src/reloadManager.js';
 import { eventList } from '../src/dbManager.js';
+import { getClips, getFollowers } from '../src/twitchAPI.js';
 import { env } from "custom-env";
 env();
 
@@ -15,11 +16,18 @@ export default {
                 .addChoices(
                     { name: 'Follow', value: 'follow' },
                     { name: 'Subscribe', value: 'subscribe' },
-                    { name: 'GiftSub', value: 'giftSub' },
+                    { name: 'Giftsub', value: 'giftsub' },
                     { name: 'Bits', value: 'bits' },
                     { name: 'Hypetrain', value: 'hypetrain' },
                     { name: 'Redeem', value: 'redeem' }
                 )))
+        .addSubcommand(subcommand => subcommand.setName('get').setDescription('get data from the twitch API')
+            .addStringOption(option => option.setName('endpoint').setDescription('data type').setRequired(true)
+                .addChoices(
+                    { name: 'Followers', value: 'followers' },
+                    { name: 'Clips', value: 'clips' }
+                ))
+            .addStringOption(option => option.setName('time').setDescription('time frame (12d 15h 5m)').setMaxLength(16).setRequired(true)))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
 
     async execute(interaction) {
@@ -33,11 +41,91 @@ export default {
         }
 
         if (interaction.options.getSubcommand() === 'events') {
+            await interaction.deferReply({ ephemeral: true });
             const eventName = interaction.options.getString('eventname');
             const months = await getEvent(eventName);
             const embed = await getEmbed(eventName, months);
-            interaction.reply({ embeds: [embed], ephemeral: true });
+            interaction.editReply({ embeds: [embed], ephemeral: true });
+            return;
         }
+
+        if (interaction.options.getSubcommand('get')) {
+            let timeFrame = 0;
+            const complexTime = interaction.options.getString('time').split(' ');
+            for (const subTime of complexTime) {
+                if (ms(subTime)) {
+                    timeFrame += ms(subTime);
+                }
+                else return interaction.reply({ content: 'not a valid time', ephemeral: true });
+            }
+            if (timeFrame > 4838400000) return interaction.reply({ content: 'Choose a time less than 8 weeks in the past.', ephemeral: true });
+
+            await interaction.deferReply({ ephemeral: true });
+
+            if (interaction.options.getString('endpoint') === 'clips') {
+                try {
+                    const clips = await getClips(Date.now() - timeFrame);
+                    const response = await interaction.editReply({
+                        content: `I found ${clips.length} clips from that timeframe.\nWhat do you want me to do with them?`,
+                        components: [await addMessageActions('Yes please', 'No thank you')],
+                        ephemeral: true
+                    });
+                    const confirmation = await manageMessageActions(response, interaction.user.id);
+                    if (!confirmation) interaction.editReply({ content: 'Command ended due to inactivity', components: [], ephemeral: true });
+                } catch (error) {
+                    console.error('Twitch API error Failed getting clips:', error);
+                    return interaction.editReply({ content: `Couldn't get clips from twitch API.`, ephemeral: true });
+                }
+            }
+            else {
+                try {
+                    //const followers = await getFollowers(Date.now() - timeFrame);
+                    const followerCount = await getFollowers(Date.now() - timeFrame);
+                    const response = await interaction.editReply({
+                        content: `${followerCount/*followers.length*/} people started following you in that timeframe.`,
+                        ephemeral: true
+                    });
+                    //const confirmation = await manageMessageActions(response, interaction.user.id);
+                    //if (!confirmation) interaction.editReply({ content: 'Command ended due to inactivity', components: [], ephemeral: true });
+                } catch (error) {
+                    console.error('Twitch API error Failed getting followers:', error);
+                    return interaction.editReply({ content: `Couldn't get follower data from twitch API.`, ephemeral: true });
+                }
+            }
+        }
+    }
+}
+
+async function addMessageActions(first, second) {
+    const confirm = new ButtonBuilder()
+        .setCustomId('confirm')
+        .setLabel(first)
+        .setStyle(ButtonStyle.Primary);
+
+    const cancel = new ButtonBuilder()
+        .setCustomId('cancel')
+        .setLabel(second)
+        .setStyle(ButtonStyle.Secondary);
+
+    return new ActionRowBuilder().addComponents(confirm, cancel);
+}
+
+async function manageMessageActions(response, userId) {
+    const collectorFilter = i => i.user.id === userId;
+
+    try {
+        const confirmation = await response.awaitMessageComponent({ filter: collectorFilter, time: 15000 });
+
+        if (confirmation.customId === 'confirm') {
+            await confirmation.update({ content: '...', components: [], ephemeral: true });
+            /* ... */
+            return true;
+        } else if (confirmation.customId === 'cancel') {
+            confirmation.update({ content: 'Alright!', components: [], ephemeral: true });
+            return true;
+        }
+    } catch (e) {
+        return false;
     }
 }
 
@@ -95,7 +183,7 @@ async function getEvent(eventName) {
             if (eventList[0].events.hasOwnProperty(eventName)) await countSubTiers(eventName, 0, lastMonth);
             if (eventList[1].events.hasOwnProperty(eventName)) await countSubTiers(eventName, 1, currentMonth);
             break;
-        case "giftSub":
+        case "giftsub":
             description = "\`\`Note: Giftsub event isn't processed if anonymous.\`\`"
             if (eventList[0].events.hasOwnProperty(eventName)) await countSubTiers(eventName, 0, lastMonth, true);
             if (eventList[1].events.hasOwnProperty(eventName)) await countSubTiers(eventName, 1, currentMonth, true);
@@ -124,18 +212,18 @@ async function getEvent(eventName) {
  * @param {string} eventName name of the event
  * @param {number} i 0 for last month or 1 for currentMonth
  * @param {Object} month the month object to add the tier count to.
- * @param {boolean} giftSub wether the event is a subscription or giftSub event.
+ * @param {boolean} giftsub wether the event is a subscription or giftsub event.
  */
-async function countSubTiers(eventName, i, month, giftSub) {
+async function countSubTiers(eventName, i, month, giftsub) {
     const tierCounts = eventList[i].events[eventName].reduce((acc, event) => {
         if (event.tier === 1000) {
-            if (giftSub) return acc.tier1 += event.amount;
+            if (giftsub) return acc.tier1 += event.amount;
             acc.tier1++;
         } else if (event.tier === 2000) {
-            if (giftSub) return acc.tier2 += event.amount;
+            if (giftsub) return acc.tier2 += event.amount;
             acc.tier2++;
         } else if (event.tier === 3000) {
-            if (giftSub) return acc.tier3 += event.amount;
+            if (giftsub) return acc.tier3 += event.amount;
             acc.tier3++;
         }
         return acc;
@@ -189,5 +277,36 @@ async function trainCount(eventName, i, month) {
     month.totalSubs = {
         name: 'Total Subs',
         data: subCount
+    }
+}
+
+function ms(str) {
+    const s = 1000;
+    const m = s * 60;
+    const h = m * 60;
+    const d = h * 24;
+    const w = d * 7;
+
+    const match = /^((?:\d+)?\.?\d+) *(s|m|h|d|w)?$/i.exec(str);
+    if (!match) return undefined;
+
+    const n = parseFloat(match[1]);
+    const type = (match[2] || 'ms').toLowerCase();
+
+    switch (type) {
+        case 'w':
+            return n * w;
+        case 'd':
+            return n * d;
+        case 'h':
+            return n * h;
+        case 'm':
+            return n * m;
+        case 's':
+            return n * s;
+        case 'ms':
+            return n;
+        default:
+            return undefined;
     }
 }
