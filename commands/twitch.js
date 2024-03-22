@@ -63,19 +63,38 @@ export default {
             await interaction.deferReply({ ephemeral: true });
 
             if (interaction.options.getString('endpoint') === 'clips') {
+
+                let clips;
                 try {
-                    const clips = await getClips(Date.now() - timeFrame);
-                    const response = await interaction.editReply({
-                        content: `I found ${clips.length} clips from that timeframe.\nWhat do you want me to do with them?`,
-                        components: [await addMessageActions('Yes please', 'No thank you')],
-                        ephemeral: true
-                    });
-                    const confirmation = await manageMessageActions(response, interaction.user.id);
-                    if (!confirmation) interaction.editReply({ content: 'Command ended due to inactivity', components: [], ephemeral: true });
+                    clips = await getClips(Date.now() - timeFrame);
                 } catch (error) {
                     console.error('Twitch API error Failed getting clips:', error);
                     return interaction.editReply({ content: `Couldn't get clips from twitch API.`, ephemeral: true });
                 }
+
+                const response = await interaction.editReply({
+                    content: `I found ${clips.length} clips from that timeframe.\nDo you want to post them?`,
+                    components: [await addMessageActions('Yes please', 'No thank you')],
+                    ephemeral: true
+                });
+                const confirmation = await manageMessageActions(response, interaction.user.id);
+                if (!confirmation) return interaction.editReply({ content: 'Command ended due to inactivity', components: [], ephemeral: true });
+                /*
+                interaction.editReply({ content: `posting clips...`, ephemeral: true });
+                const clipsPromises = [];
+                for (const clip of clips) {
+                    
+
+                    try {
+                        clipsPromises.push(clipsChannel.send(clip));    
+                    } catch (error) {
+                        
+                    }
+                }
+
+                await Promise.all(clipsPromises);
+                interaction.editReply({ content: `Completed posting ${clips.length} clips in <#${clipsChannel.id}>.`, ephemeral: true });
+                */
             }
             else {
                 try {
@@ -86,7 +105,7 @@ export default {
                         ephemeral: true
                     });
                     //const confirmation = await manageMessageActions(response, interaction.user.id);
-                    //if (!confirmation) interaction.editReply({ content: 'Command ended due to inactivity', components: [], ephemeral: true });
+                    //if (!confirmation) return interaction.editReply({ content: 'Command ended due to inactivity', components: [], ephemeral: true });
                 } catch (error) {
                     console.error('Twitch API error Failed getting followers:', error);
                     return interaction.editReply({ content: `Couldn't get follower data from twitch API.`, ephemeral: true });
@@ -216,14 +235,23 @@ async function getEvent(eventName) {
  */
 async function countSubTiers(eventName, i, month, giftsub) {
     const tierCounts = eventList[i].events[eventName].reduce((acc, event) => {
-        if (event.tier === 1000) {
-            if (giftsub) return acc.tier1 += event.amount;
+        if (event.tier === '1000') {
+            if (giftsub) {
+                acc.tier1 += event.amount;
+                return acc;
+            }
             acc.tier1++;
-        } else if (event.tier === 2000) {
-            if (giftsub) return acc.tier2 += event.amount;
+        } else if (event.tier === '2000') {
+            if (giftsub) {
+                acc.tier2 += event.amount;
+                return acc;
+            }
             acc.tier2++;
-        } else if (event.tier === 3000) {
-            if (giftsub) return acc.tier3 += event.amount;
+        } else if (event.tier === '3000') {
+            if (giftsub) {
+                acc.tier3 += event.amount;
+                return acc;
+            }
             acc.tier3++;
         }
         return acc;
