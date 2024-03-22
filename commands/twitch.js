@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ButtonStyle, ActionRowBuilder, ButtonBuilder } from 'discord.js';
 import { twitchReconnect } from '../src/utils/reloadManager.js';
 import { eventList } from '../src/utils/dbManager.js';
-import { getClips, getFollowers } from '../src/utils/twitchAPI.js';
+import { getClips } from '../src/utils/twitchAPI.js';
 import { env } from "custom-env";
 env();
 
@@ -14,17 +14,13 @@ export default {
         .addSubcommand(subcommand => subcommand.setName('events').setDescription('get your saved event data')
             .addStringOption(option => option.setName('eventname').setDescription('event type').setRequired(true)
                 .addChoices(
-                    { name: 'Follow', value: 'follow' },
                     { name: 'Subscribe', value: 'subscribe' },
                     { name: 'Giftsub', value: 'giftsub' },
-                    { name: 'Bits', value: 'bits' },
-                    { name: 'Hypetrain', value: 'hypetrain' },
-                    { name: 'Redeem', value: 'redeem' }
+                    { name: 'Bits', value: 'bits' }
                 )))
         .addSubcommand(subcommand => subcommand.setName('get').setDescription('get data from the twitch API')
             .addStringOption(option => option.setName('endpoint').setDescription('data type').setRequired(true)
                 .addChoices(
-                    { name: 'Followers', value: 'followers' },
                     { name: 'Clips', value: 'clips' }
                 ))
             .addStringOption(option => option.setName('time').setDescription('time frame (12d 15h 5m)').setMaxLength(16).setRequired(true)))
@@ -97,19 +93,7 @@ export default {
                 */
             }
             else {
-                try {
-                    //const followers = await getFollowers(Date.now() - timeFrame);
-                    const followerCount = await getFollowers(Date.now() - timeFrame);
-                    const response = await interaction.editReply({
-                        content: `${followerCount/*followers.length*/} people started following you in that timeframe.`,
-                        ephemeral: true
-                    });
-                    //const confirmation = await manageMessageActions(response, interaction.user.id);
-                    //if (!confirmation) return interaction.editReply({ content: 'Command ended due to inactivity', components: [], ephemeral: true });
-                } catch (error) {
-                    console.error('Twitch API error Failed getting followers:', error);
-                    return interaction.editReply({ content: `Couldn't get follower data from twitch API.`, ephemeral: true });
-                }
+                
             }
         }
     }
@@ -167,12 +151,6 @@ async function getEmbed(eventName, months) {
     function getFieldString(month) {
         let string = '';
         for (const key in month) {
-            if (key === 'redeems') {
-                for (const title in month.redeems) {
-                    string += `${title}: ${month.redeems[title]}\n`;
-                }
-                continue;
-            }
             string += `${month[key].name}: ${month[key].data}\n`;
         }
         return string;
@@ -195,8 +173,6 @@ async function getEvent(eventName) {
     let description = null;
 
     switch (eventName) {
-        case "follow":
-            break;
         case "subscribe":
             description = "\`\`Note: Subscribe event isn't processed if the sub was gifted.\`\`"
             if (eventList[0].events.hasOwnProperty(eventName)) await countSubTiers(eventName, 0, lastMonth);
@@ -211,14 +187,6 @@ async function getEvent(eventName) {
             description = "\`\`Note: Bits event isn't processed if anonymous.\`\`";
             if (eventList[0].events.hasOwnProperty(eventName)) await countBits(eventName, 0, lastMonth);
             if (eventList[1].events.hasOwnProperty(eventName)) await countBits(eventName, 1, currentMonth);
-            break;
-        case "hypetrain":
-            if (eventList[0].events.hasOwnProperty(eventName)) await trainCount(eventName, 0, lastMonth);
-            if (eventList[1].events.hasOwnProperty(eventName)) await trainCount(eventName, 1, currentMonth);
-            break;
-        case "redeem":
-            if (eventList[0].events.hasOwnProperty(eventName)) await countRedeems(eventName, 0, lastMonth);
-            if (eventList[1].events.hasOwnProperty(eventName)) await countRedeems(eventName, 1, currentMonth);
             break;
         default:
             break;
@@ -277,34 +245,6 @@ async function countBits(eventName, i, month) {
     month.total = {
         name: 'Total Bits',
         data: bitCount
-    }
-}
-
-async function countRedeems(eventName, i, month) {
-    const titleCount = eventList[i].events[eventName].reduce((acc, event) => {
-        acc[event.title] = (acc[event.title] || 0) + 1;
-        return acc;
-    }, {});
-    month.redeems = titleCount;
-}
-
-async function trainCount(eventName, i, month) {
-    const bitCount = eventList[i].events[eventName].reduce((acc, event) => {
-        if (!event.bitCount) return acc;
-        return acc += event.bitCount;
-    }, 0);
-    month.totalBits = {
-        name: 'Total Bits',
-        data: bitCount
-    }
-
-    const subCount = eventList[i].events[eventName].reduce((acc, event) => {
-        if (!event.subCount) return acc;
-        return acc += event.subCount;
-    }, 0);
-    month.totalSubs = {
-        name: 'Total Subs',
-        data: subCount
     }
 }
 

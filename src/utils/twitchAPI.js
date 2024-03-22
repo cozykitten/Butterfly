@@ -29,43 +29,6 @@ export default {
 }
 
 /**
- * Retrieves follower data from the Twitch API up to a specified end date.
- *
- * @param {number} endTime - The end timestamp up to which follower data should be retrieved.
- * @returns {Promise<Array>} An array of follower objects.
- * @throws {Error} If the fetch operation fails or if the access token refresh fails after a 401 Unauthorized status.
- * @example
- * getFollowers(1710538298301)
- */
-export async function getFollowers(endTime) {
-    const url = new URL('https://api.twitch.tv/helix/channels/followers');
-    url.searchParams.append('broadcaster_id', auth.broadcasterId);
-    url.searchParams.append('first', '100');
-
-    //const followers = [];
-    let followerCount = 0;
-    let cursor = null;
-
-    do {
-        if (cursor) url.searchParams.append('after', cursor);
-        try {
-            const data = await fetchTwitch(url);
-            if (data.data.length > 0 && new Date(data.data[data.data.length - 1].followed_at) < new Date(endTime)) {
-                for (const follower of data.data) {
-                    if (new Date(follower.followed_at) < new Date(endTime)) return followerCount//followers;
-                    followerCount++ //followers.push(follower);
-                }
-            }
-            else followerCount += data.data.length//followers.push(...data.data);
-            cursor = data.pagination?.cursor;
-        } catch (error) {
-            throw error;
-        }
-    } while (cursor);
-    return followerCount//followers;
-}
-
-/**
  * Retrieves clips from Twitch API within a specified time range.
  * 
  * @param {number} endTime - The end time for the clips.
