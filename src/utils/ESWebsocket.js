@@ -126,7 +126,7 @@ export default class ESWebsocket {
             this.#connections.delete(ws);
 
             //TODO: test this later, retry interval and time to wait for connection, etc
-            setTimeout(this.#connect, 900000);
+            setTimeout(() => this.#connect(), 900000);
         });
 
         ws.on('message', async (data) => {

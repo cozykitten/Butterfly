@@ -1,7 +1,7 @@
 export default {
     data: {
         type: 'channel.subscription.gift',
-        name: 'giftSub',
+        name: 'giftsub',
         version: '1',
         condition: {
             broadcaster_user_id: ""

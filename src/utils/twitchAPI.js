@@ -8,6 +8,7 @@ const wsEndpoint = 'ws://127.0.0.1:8080/ws';
 const subEndpoint = 'http://127.0.0.1:8080/eventsub/subscriptions';
 const auth = new ESAuth(process.env.TWITCH_ID, process.env.TWITCH_SECRET, db.eventSub.accessToken, db.eventSub.refreshToken, db.eventSub.broadcasterId);
 const websocket = new ESWebsocket(wsEndpoint, subEndpoint, auth);
+await shiftEventList(); //TODO check this is outside initialize function so only one timer exists for shiftEventList
 let active;
 
 export default {
@@ -76,8 +77,8 @@ export async function getFollowers(endTime) {
 export async function getClips(endTime) {
     const url = new URL('https://api.twitch.tv/helix/clips');
     url.searchParams.append('broadcaster_id', auth.broadcasterId);
-    url.searchParams.append('started_at', new Date(Date.now()).toISOString());
-    url.searchParams.append('ended_at', new Date(endTime).toISOString());
+    url.searchParams.append('started_at', new Date(endTime).toISOString());
+    url.searchParams.append('ended_at', new Date(Date.now()).toISOString());
     url.searchParams.append('first', '100');
 
     let clips = [];
@@ -110,9 +111,10 @@ async function fetchTwitch(url) {
             'Authorization': `Bearer ${auth.accessToken}`
         };
         const response = await fetch(url, { headers });
-        if (response.ok) return await response.json();
+        const data = await response.json();
+        if (response.ok) return data;
         if (response.status === 401) {
-            if (retry) throw new Error('401 Unauthorized');
+            if (retry) throw new Error(`401 Unauthorized: ${data.message}`);
             console.warn(`\x1b[31mTwitch API: 401 Unauthorized \x1b[0m`);
             const token = await auth.refreshUserAccessToken();
             if (token) retry = true;
@@ -123,7 +125,6 @@ async function fetchTwitch(url) {
 
 async function initializeEventSub(client) {
 
-    await shiftEventList();
     await websocket.createWebsocket();
 
     /**
@@ -156,7 +157,7 @@ async function initializeEventSub(client) {
 
 async function sendDiscordMessage(embed, client) {
     try {
-        const guild = client.guilds.cache.get(JSON.parse(process.env.GUILD_ID)[0]); //change on production
+        const guild = client.guilds.cache.get(JSON.parse(process.env.GUILD_ID)[0]); //TODO change on production
         const channel = guild.channels.cache.get(db[guild.id].eventSub);
         await channel.send({ embeds: [embed], flags: 4096 });
     } catch (err) {
@@ -188,6 +189,6 @@ async function eventListTimeout() {
     const date = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     const diff = date.getTime() - now.getTime();
 
-    if (diff > 2147483646) setTimeout(eventListTimeout, 2147400000);
+    if (diff > 2147483646) setTimeout(eventListTimeout, 2147400000); //TODO test if shifting works, test with short interval
     else setTimeout(shiftEventList, diff);
 }

@@ -1,5 +1,5 @@
 import { env } from "custom-env";
-env('development');
+env();
 import { db, sync } from './utils/dbManager.js';
 const authEndpoint = 'https://id.twitch.tv/oauth2/token';
 
@@ -84,13 +84,17 @@ async function getTwitchBroadcasterId(clientId, accessToken, username) {
 const authCode = '';
 const username = '';
 
-const data = await getUserAccessToken(process.env.TWITCH_ID, process.env.TWITCH_SECRET, authCode, process.env.TWITCH_REDIRECT);
-db.eventSub.accessToken = data.access_token;
-db.eventSub.refreshToken = data.refresh_token;
+if (authCode) {
+    const data = await getUserAccessToken(process.env.TWITCH_ID, process.env.TWITCH_SECRET, authCode, process.env.TWITCH_REDIRECT);
+    db.eventSub.accessToken = data.access_token;
+    db.eventSub.refreshToken = data.refresh_token;
+}
 
 const appAccessToken = await getAppAccessToken(process.env.TWITCH_ID, process.env.TWITCH_SECRET);
-const broadcasterId = await getTwitchBroadcasterId(process.env.TWITCH_ID, appAccessToken, username);
-db.eventSub.broadcasterId = broadcasterId;
+if (username) {
+    const broadcasterId = await getTwitchBroadcasterId(process.env.TWITCH_ID, appAccessToken, username);
+    db.eventSub.broadcasterId = broadcasterId;
+}
 
 sync(db);
 console.log('app access token: ' + appAccessToken);

@@ -132,7 +132,7 @@ export default {
                 else return interaction.editReply({ content: 'I might not have permissions to send messages in this channel.', ephemeral: true });
             }
             else if (!interaction.options.getString('name')) {
-                return interaction.reply({ content: 'You didn\'t select either a channel to send without saving, or a name to save this embed to.', ephemeral: true });
+                return interaction.reply({ content: 'Please select either a channel option to send your embed without saving, or a name option to save your embed.', ephemeral: true });
             }
         }
         else if (sub === 'delete') {
