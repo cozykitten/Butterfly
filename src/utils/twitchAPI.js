@@ -175,6 +175,10 @@ async function fetchTwitch(url) {
     } while (retry);
 }
 
+/**
+ * Initializes the websocket connection.
+ * @param {Client} client Discord client
+ */
 async function initializeEventSub(client) {
 
     await eventListTimeout(client);
@@ -213,9 +217,15 @@ async function initializeEventSub(client) {
     });
 
     websocket.emitter.on('disconnect', async (code) => {
+        if (client.ws.ping === -1) return;
         const home = client.guilds.cache.get(db.HOME);
         const log = home.channels.cache.get(db.LOG);
-        log.send(`Twitch websocket: connection was closed  ${code}`);
+        const embed = {
+            title: code === 1006 ? 'connection lost' : 'connection closed',
+            description: `Twitch websocket: connection was closed with code ${code}`,
+            color: code === 1006 ? 0xe4cf99 : 0xc43838
+        }
+        log.send({ embeds: [embed] });
     });
     websocket.active = true;
 }
@@ -272,7 +282,7 @@ async function shiftEventList(client) {
         const home = await client.guilds.fetch(db.HOME);
         const log = await home.channels.fetch(db.LOG);
         const embed = {
-            title: 'warn',
+            title: 'eventlist notice',
             description: 'Eventlist has been shifted.',
             color: 0xe4cf99
         }

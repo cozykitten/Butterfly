@@ -11,6 +11,7 @@ export default class ESWebsocket {
     #messageIDsIndex = 0;
     #connections = new Set();
     #keepaliveTimer;
+    #exitCode;
     #wsEndpoint;
     #subEndpoint;
     #auth;
@@ -85,11 +86,11 @@ export default class ESWebsocket {
         clearTimeout(this.#keepaliveTimer);
         this.#keepaliveTimer = setTimeout(() => {
             console.log('\n\x1b[33mTwitch websocket: timeout\x1b[0m');
-            this.#isReconnecting;
-            this.#close(ws, 4005);
+            this.#isReconnecting = true;
+            this.#close(ws);
             this.#connections.delete(ws);
             console.log('reconnecting...');
-            this.#connect();
+            setTimeout(() => this.#connect(), 30000);
         }, 15000);
     }
 
@@ -106,12 +107,24 @@ export default class ESWebsocket {
             console.log('\n\x1b[34mTwitch websocket: connected\x1b[0m');
             this.#resetKeepaliveTimer(ws);
             this.#connections.add(ws);
+            if (this.#exitCode === 1006) {
+                this.#exitCode = null;
+                setTimeout(() => this.emitter.emit('disconnect', 1006), 45000);
+            }
         });
 
         ws.once('close', async (code) => {
             ws.removeAllListeners();
-            if (code >= 4000) this.emitter.emit('disconnect', code);
-            console.log(`\x1b[33mTwitch websocket ${ws.sessionId}: disconnected (${code})\x1b[0m`);
+            if (code >= 4000) { //-> connection error that should be checked (no network loss)
+                clearTimeout(this.#keepaliveTimer);
+                this.emitter.emit('disconnect', code);
+                console.warn(`\x1b[31mTwitch websocket ${ws.sessionId}: connection closed (${code})\x1b[0m`);
+            }
+            else if (code === 1006) { //-> lost connection or connection attempt error, send warning on reconnect
+                this.#exitCode = 1006;
+                console.log(`\x1b[33mTwitch websocket ${ws.sessionId}: connection lost (${code})\x1b[0m`);
+            }
+            else console.log(`Twitch websocket ${ws.sessionId}: disconnected (${code})`);
         });
 
         /**
@@ -122,9 +135,10 @@ export default class ESWebsocket {
          */
         ws.on('error', (error) => {
             console.error('\x1b[31mTwitch websocket error:\x1b[0m', error);
-            this.#close(ws, 4006);
+            this.#close(ws, 4008);
             this.#connections.delete(ws);
-            setTimeout(() => this.#connect(), 900000);
+            setTimeout(() => this.#connect(), 300000);
+            console.log('retrying in 5 minutes');
         });
 
         ws.on('message', async (data) => {
