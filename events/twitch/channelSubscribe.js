@@ -10,16 +10,10 @@ export default {
     async execute(event) {
         if (event.is_gift) return;
 
-        return [{
+        return {
             timestamp: event.timestamp,
             user: event.user_name,
             tier: Number(event.tier)
-        },
-        {
-            title: 'New Sub',
-            description: `**User:** ${event.user_name}
-            **tier:** ${event.tier}`,
-            color: 16672622
-        }];
+        };
     }
 }

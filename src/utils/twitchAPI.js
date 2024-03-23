@@ -207,7 +207,7 @@ async function initializeEventSub(client) {
         const e = await eventFile.execute(payload.event);
         if (e) {
             if (!eventList[1].events.hasOwnProperty(eventFile.data.name)) eventList[1].events[eventFile.data.name] = [];
-            eventList[1].events[eventFile.data.name].push(e[0]);
+            eventList[1].events[eventFile.data.name].push(e);
             sync(eventList, 'events');
         }
     });
@@ -221,7 +221,7 @@ async function initializeEventSub(client) {
 }
 
 async function summary(client, events, streamLive) {
-
+    
     const embeds = eventSummaryMessage(events, streamLive);
     embeds[0].title = 'Stream Summary';
     embeds[embeds.length - 1].footer = { text: "Stream from" };

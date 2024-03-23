@@ -8,17 +8,10 @@ export default {
         }
     },
     async execute(event) {
-
-        return [{
+        return {
             timestamp: event.timestamp,
             user: event.user_name,
             tier: Number(event.tier)
-        },
-        {
-            title: 'Resub',
-            description: `**User:** ${event.user_name}
-            **tier:** ${event.tier}`,
-            color: 16672622
-        }];
+        };
     }
 }

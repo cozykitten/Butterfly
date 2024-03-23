@@ -9,21 +9,12 @@ export default {
     },
     async execute(event) {
         if (event.is_anonymous) return;
-
-        const description = `**User:** ${event.user_name}
-        **amount:** ${event.total}
-        **tier:** ${event.tier}`;
         
-        return [{
+        return {
             timestamp: event.timestamp,
             user: event.user_name,
             amount: event.total,
             tier: Number(event.tier)
-        },
-        {
-            title: 'Gifted Subs',
-            description: description,
-            color: 16672622
-        }];
+        };
     }
 }
