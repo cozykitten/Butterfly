@@ -1,6 +1,12 @@
+import { error } from 'console';
 import fs from 'fs';
 
 async function readDatabase(file) {
+    console.log(`reading ${file}`)
+
+    const fileStats = await fs.promises.stat(`./data/${file}`);
+    if (fileStats.size > 100) await fs.promises.copyFile(`./data/${file}`, `./data/${file}.bak`);
+    
     const data = await fs.promises.readFile(`./data/${file}`);
     return JSON.parse(data);
 }
@@ -16,27 +22,12 @@ export const eventList = await readDatabase('events.json');
  */
 export async function sync(db, name = 'config') {
     try {
-        await fs.promises.writeFile(`./data/${name}.json`, JSON.stringify(db, null, 2));
-        if (name !== 'config') return;
+        await fs.promises.writeFile(`./data/${name}.json.tmp`, JSON.stringify(db, null, 2));
 
-        const fileStats = await fs.promises.stat('./data/config.json');
-        if (fileStats.size < 50) return;
+        const fileStats = await fs.promises.stat(`./data/${name}.json.tmp`);
+        if (fileStats.size < 100) throw new Error(`Error writing ${name}. Syncing aborted.`);
 
-        for (let index = 2; index >= 0; index--) {
-            try {
-                if (index === 2) {
-                    await fs.promises.rm(`./data/config-${index}.bak`);
-                } else {
-                    await fs.promises.rename(`./data/config-${index}.bak`, `./data/config-${index + 1}.bak`);
-                }
-            } catch (err) {
-                if (err.code !== 'ENOENT') {
-                    throw err;
-                }
-            }
-        }
-
-        await fs.promises.copyFile('./data/config.json', './data/config-0.bak');
+        await fs.promises.rename(`./data/${name}.json.tmp`, `./data/${name}.json`);
     } catch (err) {
         console.error(err);
         throw err;
