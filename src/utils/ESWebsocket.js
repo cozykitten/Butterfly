@@ -89,7 +89,7 @@ export default class ESWebsocket {
             this.#close(ws, 4005);
             this.#connections.delete(ws);
             console.log('reconnecting...');
-            this.#connect(); //TODO: what if connection is down for a few minutes?
+            this.#connect();
         }, 15000);
     }
 
@@ -118,14 +118,12 @@ export default class ESWebsocket {
          * possibly lost connection or other error that the ws should be closed.
          * if connection still persists, remove all events automatically by not setting this.#isReconnecting true.
          * also removes timeout timer since we don't want a reconnection attempt.
-         * lastly removes reference from this.#connections
+         * lastly removes reference from this.#connections and schedules a new connection attempt in 15 minutes
          */
         ws.on('error', (error) => {
             console.error('\x1b[31mTwitch websocket error:\x1b[0m', error);
             this.#close(ws, 4006);
             this.#connections.delete(ws);
-
-            //TODO: test this later, retry interval and time to wait for connection, etc
             setTimeout(() => this.#connect(), 900000);
         });
 

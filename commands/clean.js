@@ -33,7 +33,7 @@ async function deleteMessageId(interaction) {
  * @returns {Promise<void>}
  */
 async function deleteMessageAmount(interaction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.reply({ content: '<a:AriliaLOADING:1221055537534210078>', ephemeral: true });
     let messages;
     if (interaction.options.getUser('user')) {
 
@@ -58,7 +58,6 @@ async function deleteMessageAmount(interaction) {
         return;
     }
 
-    await interaction.editReply({ content: `Deleting...`, ephemeral: true });
     const deletePromises = messages.map(async (msg) => {
         if (msg.deletable) {
             await msg.delete();

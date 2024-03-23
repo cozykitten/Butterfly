@@ -16,7 +16,7 @@ export default {
 
 	async execute(interaction) {
 
-		if (!JSON.parse(process.env.TRUSTED).includes(interaction.user.id)) return interaction.reply('This command is not available for public usage.');
+		if (!JSON.parse(process.env.TRUSTED).includes(interaction.user.id)) return interaction.reply(`You can't get rid of me <:AriliaKNIFE:1221055043084488744>`);
 
 		if (interaction.options.getInteger('option') === 2) {
 			await interaction.reply({ content: `I'll brb! <:AriliaSALUT:1150822630283292702>`, ephemeral: true});

@@ -1,4 +1,3 @@
-import { EmbedBuilder } from 'discord.js';
 import { env } from "custom-env";
 env();
 import { db, sync } from './dbManager.js';
@@ -26,10 +25,10 @@ export default async (client) => {
  */
 async function checkLastExit(log) {
 
-    const embed = new EmbedBuilder()
-        .setTitle('crash report')
-        .setDescription('last exit: unplanned')
-        .setColor(0xc43838);
-        
+    const embed = {
+        title: 'crash report',
+        description: 'last exit: unplanned',
+        color: 0xc43838
+    }
     log.send({ embeds: [embed] });
 }

@@ -8,16 +8,16 @@ export default {
         }
     },
     async execute(event) {
-        if (event.is_anonymous) return;
+        if (event.is_anonymous || event.bits < 100) return;
 
         return [{
             timestamp: event.timestamp,
-            user: event.user_login,
+            user: event.user_name,
             amount: event.bits
         },
         {
             title: 'Bits',
-            description: `**User:** ${event.user_login}
+            description: `**User:** ${event.user_name}
             **amount:** ${event.bits}`,
             color: 16672622
         }];

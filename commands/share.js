@@ -19,7 +19,7 @@ export default {
         const users = interaction.options.getString('users').match(/\d+/g);
 
         const fail = [];
-        await interaction.reply({ content: "sending...", ephemeral: true });
+        await interaction.reply({ content: '<a:AriliaLOADING:1221055537534210078>', ephemeral: true });
 
         for (const uid of users) {
             const user = await interaction.client.users.fetch(uid);

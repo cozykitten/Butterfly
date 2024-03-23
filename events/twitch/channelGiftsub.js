@@ -10,15 +10,15 @@ export default {
     async execute(event) {
         if (event.is_anonymous) return;
 
-        const description = `**User:** ${event.user_login}
+        const description = `**User:** ${event.user_name}
         **amount:** ${event.total}
         **tier:** ${event.tier}`;
         
         return [{
             timestamp: event.timestamp,
-            user: event.user_login,
+            user: event.user_name,
             amount: event.total,
-            tier: event.tier
+            tier: Number(event.tier)
         },
         {
             title: 'Gifted Subs',

@@ -12,12 +12,12 @@ export default {
 
         return [{
             timestamp: event.timestamp,
-            user: event.user_login,
-            tier: event.tier
+            user: event.user_name,
+            tier: Number(event.tier)
         },
         {
             title: 'New Sub',
-            description: `**User:** ${event.user_login}
+            description: `**User:** ${event.user_name}
             **tier:** ${event.tier}`,
             color: 16672622
         }];

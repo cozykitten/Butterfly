@@ -1,5 +1,5 @@
 import { env } from "custom-env";
-env();
+env('development');
 import { db, sync } from './utils/dbManager.js';
 const authEndpoint = 'https://id.twitch.tv/oauth2/token';
 
