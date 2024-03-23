@@ -1,16 +1,20 @@
 import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ButtonStyle, ActionRowBuilder, ButtonBuilder } from 'discord.js';
 import { twitchReconnect } from '../src/utils/reloadManager.js';
 import { eventList } from '../src/utils/dbManager.js';
-import { getClips } from '../src/utils/twitchAPI.js';
+import { eventSummaryData, eventSummaryMessage, getClips } from '../src/utils/twitchAPI.js';
 import { env } from "custom-env";
 env();
 
+const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 export default {
     data: new SlashCommandBuilder()
         .setName('twitch')
         .setDescription('commands related to twitch')
         .addSubcommand(subcommand => subcommand.setName('reconnect').setDescription('reconnect to EventSub API'))
+        .addSubcommand(subcommand => subcommand.setName('summary').setDescription('show a summary of the past month or until the specified time')
+            .addStringOption(option => option.setName('time').setDescription('time frame (12d 15h 5m)').setMaxLength(16)
+            ))
         .addSubcommand(subcommand => subcommand.setName('events').setDescription('get your saved event data')
             .addStringOption(option => option.setName('eventname').setDescription('event type').setRequired(true)
                 .addChoices(
@@ -36,6 +40,31 @@ export default {
             return;
         }
 
+        if (interaction.options.getSubcommand() === 'summary') {
+            await interaction.deferReply({ ephemeral: true });
+
+            if (!interaction.options.getString('time')) {
+                const pastMonth = eventSummaryMessage(eventList[0].events);
+                pastMonth[0].title = `Event summary of ${monthNames[eventList[0].month]}`;
+                interaction.editReply({ embeds: pastMonth, ephemeral: true });
+                return;
+            }
+
+            let timeFrame = 0;
+            const complexTime = interaction.options.getString('time').split(' ');
+            for (const subTime of complexTime) {
+                if (ms(subTime)) {
+                    timeFrame += ms(subTime);
+                }
+                else return interaction.reply({ content: 'Not a valid time', ephemeral: true });
+            }
+            if (timeFrame > 2419200000) return interaction.reply({ content: 'Choose a time less than 4 weeks in the past.', ephemeral: true });
+            const embeds = eventSummaryMessage(eventList[1].events, Date.now() - timeFrame);
+            embeds[0].title = `Event summary of the past ${ms(timeFrame)}`;
+            interaction.editReply({ embeds: embeds, ephemeral: true });
+            return;
+        }
+
         if (interaction.options.getSubcommand() === 'events') {
             await interaction.deferReply({ ephemeral: true });
             const eventName = interaction.options.getString('eventname');
@@ -52,7 +81,7 @@ export default {
                 if (ms(subTime)) {
                     timeFrame += ms(subTime);
                 }
-                else return interaction.reply({ content: 'not a valid time', ephemeral: true });
+                else return interaction.reply({ content: 'Not a valid time', ephemeral: true });
             }
             if (timeFrame > 4838400000) return interaction.reply({ content: 'Choose a time less than 8 weeks in the past.', ephemeral: true });
 
@@ -93,7 +122,7 @@ export default {
                 */
             }
             else {
-                
+
             }
         }
     }
@@ -133,7 +162,6 @@ async function manageMessageActions(response, userId) {
 }
 
 async function getEmbed(eventName, months) {
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     let lastMonthField = getFieldString(months[0]);
     let currentMonthField = getFieldString(months[1]);
 
@@ -150,9 +178,9 @@ async function getEmbed(eventName, months) {
 
     function getFieldString(month) {
         let string = '';
-        for (const key in month) {
-            string += `${month[key].name}: ${month[key].data}\n`;
-        }
+        Object.entries(month).forEach(([, value]) => {
+            string += `${value.name}: ${value.data}\n`;
+        });
         return string;
     }
 }
@@ -184,7 +212,7 @@ async function getEvent(eventName) {
             if (eventList[1].events.hasOwnProperty(eventName)) await countSubTiers(eventName, 1, currentMonth, true);
             break;
         case "bits":
-            description = "\`\`Note: Bits event isn't processed if anonymous.\`\`";
+            description = "\`\`Note: Bits event isn't processed if anonymous or if amount is < 100.\`\`";
             if (eventList[0].events.hasOwnProperty(eventName)) await countBits(eventName, 0, lastMonth);
             if (eventList[1].events.hasOwnProperty(eventName)) await countBits(eventName, 1, currentMonth);
             break;
@@ -203,19 +231,19 @@ async function getEvent(eventName) {
  */
 async function countSubTiers(eventName, i, month, giftsub) {
     const tierCounts = eventList[i].events[eventName].reduce((acc, event) => {
-        if (event.tier === '1000') {
+        if (event.tier === 1000) {
             if (giftsub) {
                 acc.tier1 += event.amount;
                 return acc;
             }
             acc.tier1++;
-        } else if (event.tier === '2000') {
+        } else if (event.tier === 2000) {
             if (giftsub) {
                 acc.tier2 += event.amount;
                 return acc;
             }
             acc.tier2++;
-        } else if (event.tier === '3000') {
+        } else if (event.tier === 3000) {
             if (giftsub) {
                 acc.tier3 += event.amount;
                 return acc;
@@ -236,6 +264,12 @@ async function countSubTiers(eventName, i, month, giftsub) {
         name: 'Tier 3 Subs',
         data: tierCounts.tier3
     }
+    const summaryData = eventSummaryData(eventList[i].events[eventName]);
+    if (!summaryData) return;
+    month.top = {
+        name: giftsub ? 'Top Sub Gifters' : 'Top Subscribers',
+        data: `*${summaryData.slice(0, 10).join(', ')}*`
+    }
 }
 
 async function countBits(eventName, i, month) {
@@ -246,16 +280,31 @@ async function countBits(eventName, i, month) {
         name: 'Total Bits',
         data: bitCount
     }
+    const summaryData = eventSummaryData(eventList[i].events[eventName]);
+    if (!summaryData) return;
+    month.top = {
+        name: 'Top Cheerers',
+        data: `*${summaryData.slice(0, 10).join(', ')}*`
+    }
 }
 
-function ms(str) {
+function ms(time) {
+
     const s = 1000;
     const m = s * 60;
     const h = m * 60;
     const d = h * 24;
     const w = d * 7;
 
-    const match = /^((?:\d+)?\.?\d+) *(s|m|h|d|w)?$/i.exec(str);
+    if (typeof (time) === 'number') {
+        if (time >= d) return time >= d * 1.5 ? `${Math.round(time / d)} days` : `${Math.round(time / d)} day`;
+        if (time >= h) return time >= h * 1.5 ? `${Math.round(time / h)} hours` : `${Math.round(time / h)} hour`;
+        if (time >= m) return time >= m * 1.5 ? `${Math.round(time / m)} minutes` : `${Math.round(time / m)} minute`;
+        if (time >= s) return time >= s * 1.5 ? `${Math.round(time / s)} seconds` : `${Math.round(time / s)} second`;
+        return time + ' ms';
+    }
+
+    const match = /^((?:\d+)?\.?\d+) *(s|m|h|d|w)?$/i.exec(time);
     if (!match) return undefined;
 
     const n = parseFloat(match[1]);
