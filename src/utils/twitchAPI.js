@@ -251,7 +251,7 @@ async function summary(client, events, streamLive) {
     embeds[embeds.length - 1].timestamp = new Date(streamLive).toISOString();
 
     try {
-        const guild = client.guilds.cache.get(JSON.parse(process.env.GUILD_ID)[1]);
+        const guild = client.guilds.cache.get(JSON.parse(process.env.GUILD_ID)[0]); //default guild comes first in .env
         const channel = guild.channels.cache.get(db[guild.id].eventSub);
         await channel.send({ embeds: embeds, flags: 4096 });
     } catch (err) {
