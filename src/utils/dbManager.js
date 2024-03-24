@@ -10,7 +10,7 @@ import fs from 'fs';
  */
 async function readDatabase(file) {
     const fileStats = await fs.promises.stat(`./data/${file}`);
-    if (fileStats.size > 100) await fs.promises.copyFile(`./data/${file}`, `./data/${file}.bak`);
+    if (fileStats.size > 80) await fs.promises.copyFile(`./data/${file}`, `./data/${file}.bak`);
     
     const data = await fs.promises.readFile(`./data/${file}`);
     return JSON.parse(data);
@@ -32,7 +32,7 @@ export async function sync(db, name = 'config') {
         await fs.promises.writeFile(`./data/${name}.json.tmp`, JSON.stringify(db, null, 2));
 
         const fileStats = await fs.promises.stat(`./data/${name}.json.tmp`);
-        if (fileStats.size < 100) throw new Error(`Error writing ${name}. Syncing aborted.`);
+        if (fileStats.size < 80) throw new Error(`Error writing ${name}. Syncing aborted.`);
 
         await fs.promises.rename(`./data/${name}.json.tmp`, `./data/${name}.json`);
     } catch (err) {
