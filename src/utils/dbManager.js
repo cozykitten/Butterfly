@@ -1,9 +1,14 @@
-import { error } from 'console';
 import fs from 'fs';
 
+/**
+ * Reads the contents of a database file and returns the parsed JSON object.
+ * If the file size is greater than 100 bytes, it creates a backup copy of the file before reading.
+ * 
+ * @param {string} file The name of the database file to read.
+ * @returns {Promise<Object>} A promise that resolves to the parsed JSON object from the file.
+ * @throws {Error} If an error occurs during file reading or parsing.
+ */
 async function readDatabase(file) {
-    console.log(`reading ${file}`)
-
     const fileStats = await fs.promises.stat(`./data/${file}`);
     if (fileStats.size > 100) await fs.promises.copyFile(`./data/${file}`, `./data/${file}.bak`);
     
@@ -15,9 +20,11 @@ export const eventList = await readDatabase('events.json');
 
 /**
  * Saves the provided database to file.
+ * Writes the database object to a temporary file, checks the file size, and if valid, renames the temporary file to the actual database file.
  * 
  * @param {Object} db The database object to write to file.
  * @param {string} name The filename where the database should be written to. Defaults to 'config' if not specified.
+ * @throws {Error} If an error occurs during write process or if the file size is less than 100 bytes, indicating a failed write operation.
  * @returns {Promise<void>}
  */
 export async function sync(db, name = 'config') {

@@ -1,5 +1,4 @@
-import { SlashCommandBuilder, Routes, PermissionFlagsBits } from 'discord.js';
-import { REST } from '@discordjs/rest';
+import { SlashCommandBuilder, Routes, PermissionFlagsBits, REST } from 'discord.js';
 import fs from 'fs';
 import { env } from "custom-env";
 env();
@@ -10,7 +9,7 @@ env();
  * @param {string[]} commandFiles List of command names.
  * @param {string[]} modifiedSet Sublist of command names to register.
  * @param {string} setName Name of the sublist of command names.
- * @returns {any[]} Array of commands to register.
+ * @returns {Promise<any[]>} Array of commands to register.
  */
 async function commandList(commandFiles, modifiedSet, setName) {
     const commands = [];
@@ -117,16 +116,15 @@ export default {
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
 
 	async execute(interaction){
-
-        //command may only be used by trusted people
+        
         if (!JSON.parse(process.env.TRUSTED).includes(interaction.user.id)) return interaction.reply('This command is not available for public usage.');
         
         const rest = new REST({ version: '10' }).setToken(process.env.CLIENT_TOKEN);
 
 
         /**
-         * @global {string[]} commands registered globally with global setting
-         * @commandFiles {string[]} all commands found in ./commands
+         * @type {string[]} global commands registered globally with global setting
+         * @type {string[]} commandFiles all commands found in ./commands
          */
         const global = ['clean', 'ping'];
         const allCommandFiles = await fs.promises.readdir('./commands/');
@@ -141,8 +139,8 @@ export default {
 
 
         /**
-         * @fullCommands Array of commands built from either all commands.
-         * @commands Array of commands. Commands present in global are removed.
+         * @type {any[]} fullCommands Array of commands built from either all commands.
+         * @type {any[]} commands Array of commands. Commands present in global are removed.
          */
         const fullCommands = await commandList(commandFiles);
         const commands = fullCommands.filter(e => !new Set(global).has(e.name));

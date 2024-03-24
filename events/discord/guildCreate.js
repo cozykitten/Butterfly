@@ -5,7 +5,7 @@ export default async (guild) => {
     await defaultChannel.send({
         embeds: [
             {
-                "title": "BakaBot has joined!",
+                "title": "Moth has joined!",
                 "description": "Nice to meet you, this is me:",
                 "color": 16672622,
                 "author": {

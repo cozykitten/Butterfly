@@ -1,5 +1,4 @@
-import { Routes } from 'discord.js';
-import { REST } from '@discordjs/rest';
+import { Routes, REST } from 'discord.js';
 import { env } from "custom-env";
 env();
 

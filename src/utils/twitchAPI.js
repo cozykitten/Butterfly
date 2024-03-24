@@ -256,8 +256,8 @@ async function summary(client, events, streamLive) {
         await channel.send({ embeds: embeds, flags: 4096 });
     } catch (err) {
         console.error(`Error sending eventSub event to ${channel.name}:`, err);
-        const home = await client.guilds.cache.get(db.HOME);
-        const log = await home.channels.cache.get(db.LOG);
+        const home = client.guilds.cache.get(db.HOME);
+        const log = home.channels.cache.get(db.LOG);
         log.send(`Error sending eventSub event to ${channel.name}: ${err.message}`);
     }
 }

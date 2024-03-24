@@ -37,7 +37,7 @@ export default class ESWebsocket {
     async createWebsocket() {
         this.emitter = new EventEmitter();
         this.subscriptions = await this.#readEvents();
-        this.#connect();
+        await this.#connect();
     }
 
     /**
