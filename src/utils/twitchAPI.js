@@ -3,9 +3,10 @@ env();
 import { db, eventList, sync } from './dbManager.js';
 import ESWebsocket from "./ESWebsocket.js";
 import ESAuth from "./ESAuth.js";
+import { Client } from "discord.js";
 
-const wsEndpoint = 'ws://127.0.0.1:8080/ws'; //wss://eventsub.wss.twitch.tv/ws
-const subEndpoint = 'http://127.0.0.1:8080/eventsub/subscriptions'; //https://api.twitch.tv/helix/eventsub/subscriptions
+const wsEndpoint = 'wss://eventsub.wss.twitch.tv/ws';
+const subEndpoint = 'https://api.twitch.tv/helix/eventsub/subscriptions';
 const auth = new ESAuth(process.env.TWITCH_ID, process.env.TWITCH_SECRET, db.eventSub.accessToken, db.eventSub.refreshToken, db.eventSub.broadcasterId);
 const websocket = new ESWebsocket(wsEndpoint, subEndpoint, auth);
 let shiftEventListTimer;
@@ -24,6 +25,7 @@ export default {
     async terminate() {
         if (!websocket.active) return;
         await websocket.terminate();
+        websocket.active = false;
     }
 }
 
@@ -176,8 +178,8 @@ async function fetchTwitch(url) {
 }
 
 /**
- * Initializes the websocket connection.
- * @param {Client} client Discord client
+ * Initializes the websocket connection and registers event listeners to listen for subscribed event notifications.
+ * @param {Client} client Discord client.
  */
 async function initializeEventSub(client) {
 
@@ -185,8 +187,8 @@ async function initializeEventSub(client) {
     await websocket.createWebsocket();
 
     /**
-     * Handles every subscribed event on trigger, saves it and sends a notification.
-     * Events are saved under their custom name, not  their type.
+     * Saves event data under their custom name, not their type.
+     * Saves stream start time to send a summary of all events received during the duration of the stream after the stream ends.
      * 
      * Cheer event isn't processed if anonymous or if amount is < 100.
      * Subscribe event isn't processed if the sub was gifted.
@@ -216,6 +218,10 @@ async function initializeEventSub(client) {
         }
     });
 
+    /**
+     * Sends a log message on websocket disconnect.
+     * Since a websocket disconnect is likely caused by a network error, check the Discord client's connection before sending.
+     */
     websocket.emitter.on('disconnect', async (code) => {
         if (client.ws.ping === -1) return;
         const home = client.guilds.cache.get(db.HOME);
@@ -230,15 +236,22 @@ async function initializeEventSub(client) {
     websocket.active = true;
 }
 
+/**
+ * Creates and sends a summary of event users back to the provided streamLive timestamp.
+ * 
+ * @param {Client} client Discord client.
+ * @param {Object} events Events object of the current month, holding lists of events by type.
+ * @param {number} streamLive Timestamp until which data should be collected, starting from now.
+ */
 async function summary(client, events, streamLive) {
-    
+
     const embeds = eventSummaryMessage(events, streamLive);
     embeds[0].title = 'Stream Summary';
     embeds[embeds.length - 1].footer = { text: "Stream from" };
     embeds[embeds.length - 1].timestamp = new Date(streamLive).toISOString();
 
     try {
-        const guild = client.guilds.cache.get(JSON.parse(process.env.GUILD_ID)[0]); //TODO change on production
+        const guild = client.guilds.cache.get(JSON.parse(process.env.GUILD_ID)[1]);
         const channel = guild.channels.cache.get(db[guild.id].eventSub);
         await channel.send({ embeds: embeds, flags: 4096 });
     } catch (err) {
@@ -249,6 +262,13 @@ async function summary(client, events, streamLive) {
     }
 }
 
+/**
+ * Split a given description string into chunks no longer than maxLength.
+ * If possible, chunks are separated on ', '.
+ * @param {string} description Full length string that needs to be split into chunks.
+ * @param {number} maxLength The maximum length each chunk can be, defaults to 4096.
+ * @returns Array of chunks of the initial description string.
+ */
 function splitDescription(description, maxLength = 4096) {
     const chunks = [];
     while (description.length > maxLength) {
@@ -268,6 +288,7 @@ function splitDescription(description, maxLength = 4096) {
 
 /**
  * If the current month is ahead of the latest month list, remove the older month list (first item) and create structure for the current month.
+ * @param {Client} client Discord client. 
  */
 async function shiftEventList(client) {
 
@@ -289,9 +310,12 @@ async function shiftEventList(client) {
         log.send({ embeds: [embed] });
     }
     eventListTimeout(client);
-
 }
 
+/**
+ * Sets a new timeout for shiftEventList() that triggers at the first day of the next month.
+ * @param {Client} client Discord client. 
+ */
 async function eventListTimeout(client) {
     const now = new Date();
     const date = new Date(now.getFullYear(), now.getMonth() + 1, 1);

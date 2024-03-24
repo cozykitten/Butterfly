@@ -19,7 +19,7 @@ export default class ESWebsocket {
     emitter;
 
     /**
-     * Creates a new ESWebsocket instance to interact with Twitch's EventSub system.
+     * Creates a new ESWebsocket instance to interact with Twitch's EventSub API.
      * 
      * @param {string} wsEndpoint - The WebSocket server endpoint URL.
      * @param {string} subEndpoint - The event subscription endpoint URL.
@@ -32,8 +32,7 @@ export default class ESWebsocket {
     }
 
     /**
-     * Initializes the Webocket connection to Twitch's EventSub system.
-     * @throws {Error} If an error occurs during the WebSocket connection or event subscription process.
+     * Initializes the WebSocket connection to Twitch's EventSub API.
      */
     async createWebsocket() {
         this.emitter = new EventEmitter();
@@ -42,7 +41,7 @@ export default class ESWebsocket {
     }
 
     /**
-     * Closes all Websocket connections, unregisters from all events and removes all eventlisteners on this instance.
+     * Closes all WebSocket connections, unregisters from all events, and removes all event listeners on this instance.
      */
     async terminate() {
         for (const connection of this.#connections) {
@@ -55,8 +54,11 @@ export default class ESWebsocket {
 
     /**
      * Closes the specified connection and removes eventlisteners.
-     * Unregisters from events if not reconnecting.
-     * @param {WebSocket} connection The connection to close.
+     * lears the keepalive timer (and unregisters from events) if not reconnecting.
+     * 
+     * @param {WebSocket} connection - The WebSocket connection to close.
+     * @param {number} - The status code indicating why the connection is being closed. Defaults to 1000 (normal closure).
+     * @returns {Promise<void>} 
      */
     async #close(connection, code = 1000) {
         if (!this.#isReconnecting && connection.sessionId) {
@@ -66,10 +68,12 @@ export default class ESWebsocket {
                 if (cleared) console.log(`Deleted subscription to event: ${eventName}`);
             }*/ //no need to cleanup past subscriptions, twitch automatically disables those
         }
-        this.#isReconnecting = false;
         connection.close(code);
     }
 
+    /**
+     * Imports event subscription files and populates the subscriptions object with their corresponding event data.
+     */
     async #readEvents() {
         const twitchEventFiles = await fs.promises.readdir('./events/twitch/');
         const eventFiles = twitchEventFiles.filter(file => file.endsWith('.js'));
@@ -82,18 +86,28 @@ export default class ESWebsocket {
         return subscriptions;
     }
 
+    /**
+     * Resets the keepalive timer for the specified WebSocket connection.
+     * Should be called on every 'session_keepalive' and 'notification' event.
+     * 'on close' event will set the code to 1006 to indicte that it received no code, regardless of what code is sent.
+     * Code 1006 signals 'on close' event to attempt reconnection.
+     * 
+     * @param {WebSocket} ws - The currently active primary WebSocket connection.
+     */
     async #resetKeepaliveTimer(ws) {
         clearTimeout(this.#keepaliveTimer);
         this.#keepaliveTimer = setTimeout(() => {
             console.log('\n\x1b[33mTwitch websocket: timeout\x1b[0m');
             this.#isReconnecting = true;
-            this.#close(ws);
+            this.#close(ws, 1006);
             this.#connections.delete(ws);
-            console.log('reconnecting...');
-            setTimeout(() => this.#connect(), 30000);
         }, 15000);
     }
 
+    /**
+     * Establishes a WebSocket connection to Twitch's EventSub API.
+     * Handles subscriptions, all connection events, reconnection logic.
+     */
     async #connect() {
         const ws = new WebSocket(this.#wsEndpoint, {
             perMessageDeflate: false,
@@ -103,6 +117,11 @@ export default class ESWebsocket {
             }
         });
 
+        /**
+         * On established connection, initiates the keepalive timeout, and adds the connection to the set of active connections.
+         * If exitCode 1006 is set, that means that a previous connection timed out or couldn't be established.
+         * In this case, emit a 'disconnect' event for logging, on a 45s timeout to make sure discord's heartbeat was received.
+         */
         ws.once('open', () => {
             console.log('\n\x1b[34mTwitch websocket: connected\x1b[0m');
             this.#resetKeepaliveTimer(ws);
@@ -113,34 +132,58 @@ export default class ESWebsocket {
             }
         });
 
+        /**
+         * Removes all event listeners.
+         * Reconnection should only attempted on connection loss, indicated by code '1006'.
+         * On timeout reconnects are first attempts and are scheduled after 30 seconds.
+         * Other reconnects are scheduled after 5 minutes.
+         * If no reconnection attemt should be made, clear the keepalive timeout.
+         * @param {number} code - The status code indicating why the connection was closed.
+         */
         ws.once('close', async (code) => {
             ws.removeAllListeners();
-            if (code >= 4000) { //-> connection error that should be checked (no network loss)
+            if (code >= 4000) { //-> connection error that should be checked (no network loss), should not reconnect
                 clearTimeout(this.#keepaliveTimer);
                 this.emitter.emit('disconnect', code);
                 console.warn(`\x1b[31mTwitch websocket ${ws.sessionId}: connection closed (${code})\x1b[0m`);
             }
-            else if (code === 1006) { //-> lost connection or connection attempt error, send warning on reconnect
+            else if (code === 1006) { //-> lost connection or connection attempt error, send warning on reconnect, should reconnect
                 this.#exitCode = 1006;
                 console.log(`\x1b[33mTwitch websocket ${ws.sessionId}: connection lost (${code})\x1b[0m`);
+                if (this.#isReconnecting) {
+                    setTimeout(() => this.#connect(), 30000);
+                    console.log('reconnecting...');
+                }
+                else {
+                    setTimeout(() => this.#connect(), 300000);
+                    console.log('retrying in 5 minutes');
+                }
             }
             else console.log(`Twitch websocket ${ws.sessionId}: disconnected (${code})`);
+            this.#isReconnecting = false;
         });
 
         /**
-         * possibly lost connection or other error that the ws should be closed.
-         * if connection still persists, remove all events automatically by not setting this.#isReconnecting true.
-         * also removes timeout timer since we don't want a reconnection attempt.
-         * lastly removes reference from this.#connections and schedules a new connection attempt in 15 minutes
+         * Closes the WebSocket connection and removes it from the set of active connections.
+         * Fires usually when no WebSocket connection can be established due to a lost network connection.
+         * 
+         * If connection still persists, code '4008' will be received by the 'on close' event.
+         * This also removes the keepalive timeout since we don't want a reconnection attempt.
+         * (removes all events automatically by not setting this.#isReconnecting = true)
+         * If connection doesn't exist, 'on close' event will receive code '1006' and schedule a reconnection attempt.
+         * @param {Error} error - The error that occurred.
          */
         ws.on('error', (error) => {
             console.error('\x1b[31mTwitch websocket error:\x1b[0m', error);
             this.#close(ws, 4008);
             this.#connections.delete(ws);
-            setTimeout(() => this.#connect(), 300000);
-            console.log('retrying in 5 minutes');
         });
 
+        /**
+         * Handles the 'message' event for the WebSocket connection.
+         * Processes event data incoming from subscriptions as well as session connection and subscription related events.
+         * @param {string} data - The data received from the WebSocket.
+         */
         ws.on('message', async (data) => {
             const message = JSON.parse(data);
             const messageTimestamp = Date.parse(message.metadata.message_timestamp);
@@ -187,6 +230,10 @@ export default class ESWebsocket {
         });
     }
 
+    /**
+     * Creates subscriptions for every event in the subscriptions object for the given WebSocket connection.
+     * @param {string} websocketID The ID of the WebSocket connection to register events on.
+     */
     async #registerSubscriptions(websocketID) {
         for (const eventName in this.subscriptions) {
             const { type, version, condition } = this.subscriptions[eventName].data;
@@ -201,6 +248,10 @@ export default class ESWebsocket {
         }
     }
 
+    /**
+     * Unregisters all subscriptions that may still be registered on the EventSub Endpoint.
+     * Frst gets a list of all existing subscriptions, then calls the #unsubscribe method on each subscription.
+     */
     async #removeExistingSubscriptions() {
         const subList = await this.#getSubscriptions();
         if (subList && subList.length > 0) {
@@ -214,9 +265,7 @@ export default class ESWebsocket {
 
     /**
      * Gets a list of all registered subscriptions.
-     * 
-     * @returns {Promise<Array<Object>|boolean} A promise that resolves to a list of registered subscription objects if successful, or false if an error occurs.
-     * @throws {Error} If the request was denied for some reason.
+     * @returns {Promise<Array<Object>|boolean>} A promise that resolves to a list of registered subscription objects if successful, or false if an error occurs.
      */
     async #getSubscriptions(retry = false) {
         try {
