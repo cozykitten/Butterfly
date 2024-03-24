@@ -34,12 +34,20 @@ export default {
 
         if (!JSON.parse(process.env.TRUSTED).includes(interaction.user.id)) return interaction.reply('This command is not available for public usage.');
 
+        /**
+         * Manually triggers a full reconnect of the Twitch EventSub WebSocket.
+         */
         if (interaction.options.getSubcommand() === 'reconnect') {
-            await interaction.reply({ content: `reconnecting...`, ephemeral: true });
+            await interaction.reply({ content: `<a:AriliaLOADING:1221055537534210078>`, ephemeral: true });
             if (await twitchReconnect(interaction.client)) interaction.editReply({ content: `Successfully reconnected.`, ephemeral: true });
             return;
         }
 
+        /**
+         * The summary subcommand sums up the names of all event contributors from the past month if no 'time' option is specified,
+         * or from now searching back by the 'time' interval if specified.
+         * In the second case, results are limited to the current month.
+         */
         if (interaction.options.getSubcommand() === 'summary') {
             await interaction.deferReply({ ephemeral: true });
 
@@ -59,12 +67,22 @@ export default {
                 else return interaction.reply({ content: 'Not a valid time', ephemeral: true });
             }
             if (timeFrame > 2419200000) return interaction.reply({ content: 'Choose a time less than 4 weeks in the past.', ephemeral: true });
-            const embeds = eventSummaryMessage(eventList[1].events, Date.now() - timeFrame);
-            embeds[0].title = `Event summary of the past ${ms(timeFrame)}`;
+
+            const timeNow = Date.now();
+            const dateNow = new Date(timeNow);
+            const beginningOfMonth = new Date(dateNow.getFullYear(), dateNow.getMonth(), 1);
+            const timeDiff = timeNow - beginningOfMonth.getTime();
+
+            const embeds = eventSummaryMessage(eventList[1].events, timeNow - timeFrame);
+            if (timeFrame > timeDiff) embeds[0].title = `Event summary of ${monthNames[eventList[1].month]}`;
+            else embeds[0].title = `Event summary of the past ${ms(timeFrame)}`;
             interaction.editReply({ embeds: embeds, ephemeral: true });
             return;
         }
 
+        /**
+         * The 'events' subcommand compiles collected data on the given event type, specified by the 'eventname' option.
+         */
         if (interaction.options.getSubcommand() === 'events') {
             await interaction.deferReply({ ephemeral: true });
             const eventName = interaction.options.getString('eventname');
@@ -74,6 +92,10 @@ export default {
             return;
         }
 
+        /**
+         * The 'get' subcommand is meant to be used for fetching and processing any kind of data from the Twitch Helix API.
+         * The desired endpoint and kind of the data is determined by the 'endpoint' option.
+         */
         if (interaction.options.getSubcommand('get')) {
             let timeFrame = 0;
             const complexTime = interaction.options.getString('time').split(' ');
@@ -104,19 +126,15 @@ export default {
                 });
                 const confirmation = await manageMessageActions(response, interaction.user.id);
                 if (!confirmation) return interaction.editReply({ content: 'Command ended due to inactivity', components: [], ephemeral: true });
-                /*
+                /* // example scenario
                 interaction.editReply({ content: `posting clips...`, ephemeral: true });
                 const clipsPromises = [];
                 for (const clip of clips) {
-                    
-
                     try {
                         clipsPromises.push(clipsChannel.send(clip));    
-                    } catch (error) {
-                        
+                    } catch (error) { 
                     }
                 }
-
                 await Promise.all(clipsPromises);
                 interaction.editReply({ content: `Completed posting ${clips.length} clips in <#${clipsChannel.id}>.`, ephemeral: true });
                 */
@@ -161,6 +179,13 @@ async function manageMessageActions(response, userId) {
     }
 }
 
+/**
+ * Constructs an embed based on the provided event data and returns it.
+ * 
+ * @param {string} eventName Name of the requested event type.
+ * @param {any[]} months Array containing the compiled event data for the last and current month.
+ * @returns {Promise<EmbedBuilder>} The completed embed, ready to be sent.
+ */
 async function getEmbed(eventName, months) {
     let lastMonthField = getFieldString(months[0]);
     let currentMonthField = getFieldString(months[1]);
@@ -185,6 +210,13 @@ async function getEmbed(eventName, months) {
     }
 }
 
+/**
+ * Retrieves and processes the stored data on the given event and returns it in a format that can easily be iterated on to add the processed data to the reply embed.
+ * 
+ * @param {string} eventName Name of the requested event type.
+ * @returns {Promise<any[]>} Array with the object containing the event data for the last month at index 0,
+ * the object with the data for the current month at index 1, and a string representing the description to be set in the reply embed.
+ */
 async function getEvent(eventName) {
     const lastMonth = {
         count: {
@@ -223,11 +255,12 @@ async function getEvent(eventName) {
 }
 
 /**
- * Mutates the given month object directly by adding the tiercounts.
- * @param {string} eventName name of the event
- * @param {number} i 0 for last month or 1 for currentMonth
- * @param {Object} month the month object to add the tier count to.
- * @param {boolean} giftsub wether the event is a subscription or giftsub event.
+ * Mutates the given month object directly by adding the tiercounts and top contributors.
+ * 
+ * @param {string} eventName Name of the requested event type.
+ * @param {number} i 0 for last month or 1 for currentMonth.
+ * @param {Object} month The month object to add the tier count to.
+ * @param {boolean} giftsub Wether the event is a subscription or giftsub event.
  */
 async function countSubTiers(eventName, i, month, giftsub) {
     const tierCounts = eventList[i].events[eventName].reduce((acc, event) => {
@@ -272,6 +305,13 @@ async function countSubTiers(eventName, i, month, giftsub) {
     }
 }
 
+/**
+ * Mutates the given month object directly by adding the total bits amount and top contributors.
+ * 
+ * @param {string} eventName Name of the requested event type.
+ * @param {} i 0 for last month or 1 for currentMonth.
+ * @param {Object} month The month object to add the tier count to.
+ */
 async function countBits(eventName, i, month) {
     const bitCount = eventList[i].events[eventName].reduce((acc, event) => {
         return acc += event.amount;
@@ -288,6 +328,13 @@ async function countBits(eventName, i, month) {
     }
 }
 
+/**
+ * A reduced implementation of the 'ms' npm module that fits the needs of this command.
+ * 
+ * @param {string | number} time A time string consisting of a number and character of (w|d|h|m|s), or a number representing milliseconds.
+ * @returns {string | number | undefined} If a string is passed as argument, returns the number of milliseconds the string represents.
+ * If a number is passed as argument, returns a string representing the time interval equivalent to the number in milliseconds.
+ */
 function ms(time) {
 
     const s = 1000;
