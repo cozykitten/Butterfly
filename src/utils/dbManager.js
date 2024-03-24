@@ -11,7 +11,7 @@ import fs from 'fs';
 async function readDatabase(file) {
     const fileStats = await fs.promises.stat(`./data/${file}`);
     if (fileStats.size > 80) await fs.promises.copyFile(`./data/${file}`, `./data/${file}.bak`);
-    
+
     const data = await fs.promises.readFile(`./data/${file}`);
     return JSON.parse(data);
 }
