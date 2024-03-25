@@ -12,6 +12,7 @@ export default {
         .setName('twitch')
         .setDescription('commands related to twitch')
         .addSubcommand(subcommand => subcommand.setName('reconnect').setDescription('reconnect to EventSub API'))
+        .addSubcommand(subcommand => subcommand.setName('disconnect').setDescription('disconnect from EventSub API'))
         .addSubcommand(subcommand => subcommand.setName('summary').setDescription('show a summary of the past month or until the specified time')
             .addStringOption(option => option.setName('time').setDescription('time frame (12d 15h 5m)').setMaxLength(16)
             ))
@@ -40,6 +41,12 @@ export default {
         if (interaction.options.getSubcommand() === 'reconnect') {
             await interaction.reply({ content: `<a:AriliaLOADING:1221055537534210078>`, ephemeral: true });
             if (await twitchReconnect(interaction.client)) interaction.editReply({ content: `Successfully reconnected.`, ephemeral: true });
+            return;
+        }
+
+        if (interaction.options.getSubcommand() === 'disconnect') {
+            await interaction.reply({ content: `<a:AriliaLOADING:1221055537534210078>`, ephemeral: true });
+            if (await twitchReconnect(interaction.client, false)) interaction.editReply({ content: `Successfully disconnected.`, ephemeral: true });
             return;
         }
 
