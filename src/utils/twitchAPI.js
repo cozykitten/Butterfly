@@ -24,7 +24,7 @@ export default {
      */
     async terminate() {
         if (!websocket.active) return;
-        await websocket.terminate();
+        await websocket.destroy();
         websocket.active = false;
     }
 }
@@ -219,19 +219,30 @@ async function initializeEventSub(client) {
     });
 
     /**
-     * Sends a log message on websocket disconnect.
+     * Sends a log message on websocket connect disconnect.
      * Since a websocket disconnect is likely caused by a network error, check the Discord client's connection before sending.
      */
-    websocket.emitter.on('disconnect', async (code) => {
-        if (client.ws.ping === -1) return;
+    websocket.emitter.on('connection', async (msg) => {
+        if (client.ws.ping === -1) return websocket.emitter.emit('cleanupComplete');
         const home = client.guilds.cache.get(db.HOME);
         const log = home.channels.cache.get(db.LOG);
+        
+        if (msg.connect) {
+            const embed = {
+                title: 'websocket connected',
+                description: `Twitch websocket: connected **${msg.id}**\n${msg.subCount} existing subscriptions`,
+                color: 0x5C79D6
+            }
+            log.send({ embeds: [embed] });
+            return;
+        }
         const embed = {
-            title: code === 1006 ? 'connection lost' : 'connection closed',
-            description: `Twitch websocket: connection was closed with code ${code}`,
-            color: code === 1006 ? 0xe4cf99 : 0xc43838
+            title: msg.code === 1006 ? 'connection lost' : 'connection closed',
+            description: `Twitch websocket: connection **${msg.id ? msg.id + ' ' : ''}**was closed with code **${msg.code}**`,
+            color: msg.code === 1006 ? 0xe4cf99 : 0xc43838
         }
         log.send({ embeds: [embed] });
+        websocket.emitter.emit('cleanupComplete');
     });
     websocket.active = true;
 }
