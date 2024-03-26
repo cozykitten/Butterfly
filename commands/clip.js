@@ -19,6 +19,8 @@ export default {
     
     async execute(interaction) {
 
+        return interaction.reply({ content: `There is nothing here. <:AriliaLOST:1220776744756187245>`, ephemeral: true });
+
         const channelIds = db[interaction.guild.id].clipChannels;
         const urlRegex = /(https:\/\/(?:clips.|www.)?twitch.tv\/[^\s]+)/;
         const firstUrl = interaction.options.getString('url').match(urlRegex)[0];

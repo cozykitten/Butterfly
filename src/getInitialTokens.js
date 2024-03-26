@@ -28,9 +28,6 @@ async function getUserAccessToken(clientId, clientSecret, authCode, redirectUrl)
         });
 
         const data = await response.json();
-        // db.eventSub.accessToken = data.access_token;
-        // db.eventSub.refreshToken = data.refresh_token;
-        // sync(db);
         return data;
     } catch (error) {
         console.error('Error fetching User Access Token:', error);
@@ -54,7 +51,6 @@ async function getAppAccessToken(clientId, clientSecret) {
         });
 
         const data = await response.json();
-        //if using this methodas part of twitch modules, implement storage of the token
         return data.access_token;
     } catch (error) {
         console.error('Error fetching App Access Token:', error);
