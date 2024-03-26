@@ -233,7 +233,7 @@ async function initializeEventSub(client) {
                 description: `Twitch websocket: connected **${msg.id}**\n${msg.subCount} existing subscriptions`,
                 color: 0x5C79D6
             }
-            log.send({ embeds: [embed] });
+            await log.send({ embeds: [embed] });
             return;
         }
         const embed = {
@@ -241,7 +241,7 @@ async function initializeEventSub(client) {
             description: `Twitch websocket: connection **${msg.id ? msg.id + ' ' : ''}**was closed with code **${msg.code}**`,
             color: msg.code === 1006 ? 0xe4cf99 : 0xc43838
         }
-        log.send({ embeds: [embed] });
+        await log.send({ embeds: [embed] });
         websocket.emitter.emit('cleanupComplete');
     });
     websocket.active = true;
