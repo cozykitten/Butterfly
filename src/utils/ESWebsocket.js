@@ -6,7 +6,7 @@ import { EventEmitter } from 'events';
  * Represents a websocket connection for interacting with Twitch's EventSub API.
  */
 export default class ESWebsocket {
-    #isReconnecting = false;
+    #isTimeout = false;
     #messageIDs = new Array(10);
     #messageIDsIndex = 0;
     #connections = new Set();
@@ -46,20 +46,22 @@ export default class ESWebsocket {
      */
     async destroy() {
         const connections = new Set(this.#connections);
+        console.log(`destroying ${connections.size} connections..`);
         const cleanupPromise = new Promise(resolve => {
             let cleanupCounter = 0;
+            if (cleanupCounter === connections.size) resolve();
             this.emitter.on('cleanupComplete', () => {
                 cleanupCounter++;
-                if (cleanupCounter === connections.size) {
-                    resolve();
-                }
+                if (cleanupCounter === connections.size) resolve();
             });
         });
 
+        clearTimeout(this.#keepaliveTimer);
         for (const connection of connections) {
-            await this.#close(connection);
+            connection.close(1000);
         }
         await cleanupPromise;
+        console.log('cleanup promise resolved');
         this.emitter.removeAllListeners();
         this.emitter = this.subscriptions = null;
     }
@@ -69,19 +71,19 @@ export default class ESWebsocket {
      * Clears the keepalive timer (and unsubscribes from events) if not reconnecting.
      * 
      * @param {WebSocket} connection - The WebSocket connection to close.
-     * @param {number} - The status code indicating why the connection is being closed. Defaults to 1000 (normal closure).
+     * @param {number} - The status code indicating why the connection is being closed.
      * @returns {Promise<void>} 
      */
-    async #close(connection, code = 1000) {
-        if (!this.#isReconnecting && connection.sessionId) {
-            clearTimeout(this.#keepaliveTimer);
-            /*for (const eventName in this.subscriptions) {
+    async #close(connection, code) {
+        if (this.#connections.size < 2 && connection.sessionId) {
+            for (const eventName in this.subscriptions) {
                 const cleared = await this.#unsubscribe(this.subscriptions[eventName].data.id);
                 if (cleared) console.log(`Deleted subscription to event: ${eventName}`);
-            }*/ //no need to cleanup past subscriptions, twitch automatically disables those
+            }
         }
-        connection.close(code);
-    }
+        if (code) connection.close(code);
+        else connection.close();
+    } //no need to cleanup past subscriptions, twitch automatically disables those
 
     /**
      * Imports event subscription files and populates the subscriptions object with their corresponding event data.
@@ -109,10 +111,10 @@ export default class ESWebsocket {
     async #resetKeepaliveTimer(ws) {
         clearTimeout(this.#keepaliveTimer);
         this.#keepaliveTimer = setTimeout(() => {
-            console.log('\n\x1b[33mTwitch websocket: timeout\x1b[0m');
-            this.#isReconnecting = true;
-            this.#close(ws, 4009);
-        }, 15000);
+            console.warn('\n\x1b[33mTwitch websocket: timeout\x1b[0m');
+            this.#isTimeout = true;
+            ws.close();
+        }, 12000);
     }
 
     /**
@@ -135,12 +137,7 @@ export default class ESWebsocket {
          */
         ws.once('open', () => {
             console.log('\n\x1b[34mTwitch websocket: connected\x1b[0m');
-            this.#resetKeepaliveTimer(ws);
             this.#connections.add(ws);
-            if (this.#exitCode === 1006) {
-                setTimeout(() => this.emitter?.emit('connection', {connect: false, code: this.#exitCode}), 45000);
-                this.#exitCode = null;
-            }
         });
 
         /**
@@ -153,15 +150,12 @@ export default class ESWebsocket {
          */
         ws.once('close', async (code) => {
             ws.removeAllListeners();
-            if (code >= 4000) { //-> connection error that should be checked (no network loss), should not reconnect
-                clearTimeout(this.#keepaliveTimer);
-                this.emitter.emit('connection', {connect: false, code: code, id: ws.sessionId});
-                console.warn(`\x1b[31mTwitch websocket ${ws.sessionId}: connection closed (${code})\x1b[0m`);
-            }
-            else if (code === 1006) { //-> lost connection or connection attempt error, send warning on reconnect, should reconnect
-                this.#exitCode = 1006;
+
+            if (code === 1006 || code === 1005) { //-> lost connection or connection attempt error, send warning on reconnect, should reconnect
+                this.#exitCode = code;
                 console.log(`\x1b[33mTwitch websocket ${ws.sessionId}: connection lost (${code})\x1b[0m`);
-                if (this.#isReconnecting) {
+                if (this.#isTimeout) {
+                    this.#isTimeout = false;
                     setTimeout(() => this.#connect(), 30000);
                     console.log('reconnecting...');
                 }
@@ -170,12 +164,19 @@ export default class ESWebsocket {
                     console.log('retrying in 5 minutes');
                 }
             }
-            else {
-                this.emitter.emit('connection', {connect: false, code: code, id: ws.sessionId});
-                console.log(`Twitch websocket ${ws.sessionId}: disconnected (${code})`);
+            else if (this.#connections.size < 2) {
+                if (code >= 4000) { //-> close initiated by twitch, clear timeout here
+                    clearTimeout(this.#keepaliveTimer);
+                }
+                if (code === 1000) console.log(`Twitch websocket ${ws.sessionId}: disconnected (${code})`);
+                else console.warn(`\x1b[31mTwitch websocket ${ws.sessionId}: connection closed (${code})\x1b[0m`);
+
+                this.emitter.emit('connection', { connect: false, code: code, id: ws.sessionId }); //-> send notification about close, should not reconnect
             }
-            this.#isReconnecting = false;
+            else console.log(`Twitch websocket ${ws.sessionId}: disconnected (${code})`);
+
             this.#connections.delete(ws);
+            console.log(`${this.#connections.size} connections remaining`);
         });
 
         /**
@@ -184,13 +185,13 @@ export default class ESWebsocket {
          * 
          * If connection still persists, code '4008' will be received by the 'on close' event.
          * This also removes the keepalive timeout since we don't want a reconnection attempt.
-         * (removes all events automatically by not setting this.#isReconnecting = true)
          * If connection doesn't exist, 'on close' event will receive code '1006' and schedule a reconnection attempt.
          * @param {Error} error - The error that occurred.
          */
         ws.on('error', (error) => {
             console.error('\x1b[31mTwitch websocket error:\x1b[0m', error);
-            this.#close(ws, 4008);
+            console.warn('\x1b[31mTwitch websocket error duplicate:\x1b[0m', error);
+            if (ws.sessionId) clearTimeout(this.#keepaliveTimer);
         });
 
         /**
@@ -215,26 +216,35 @@ export default class ESWebsocket {
                 this.emitter.emit('notification', message.payload);
             }
             else if (message.metadata.message_type === 'session_reconnect') {
-                this.#isReconnecting = true;
                 this.#wsEndpoint = message.payload.session.reconnect_url;
                 this.#connect();
             }
             else if (message.metadata.message_type === 'session_welcome') {
+                this.#resetKeepaliveTimer(ws);
                 ws.sessionId = message.payload.session.id;
                 console.log(`Websocket ID: ${ws.sessionId}\n`);
 
                 if (this.#connections.size > 1) {
+                    //no notif, only timer and continue
                     const ws = this.#connections.values().next().value;
-                    this.#close(ws);
+                    ws.close(1000);
                     return;
+                }
+
+                if (this.#exitCode === 1006 || this.#exitCode === 1005) {
+                    (function(exitCode) {
+                        setTimeout(() => this.emitter?.emit('connection', { reconnect: true, code: exitCode, id: ws.sessionId }), 45000);
+                    })(this.#exitCode);
+                    this.#exitCode = null;
+                }
+                else {
+                    //send connected log with current count of (active and inactive) subscriptions.
+                    const subList = await this.#getSubscriptions();
+                    setTimeout(() => this.emitter?.emit('connection', { connect: true, id: ws.sessionId, subCount: subList?.length }), 45000);
                 }
 
                 //await this.#removeExistingSubscriptions(); //no need to cleanup past subscriptions, twitch automatically disables those
                 await this.#registerSubscriptions(ws.sessionId);
-
-                //send connected log with current count of (active and inactive) subscriptions.
-                const subList = await this.#getSubscriptions();
-                setTimeout(() => this.emitter?.emit('connection', {connect: true, id: ws.sessionId, subCount: subList?.length}), 45000);
             }
             else if (message.metadata.message_type === 'revocation') {
                 const reason = message.payload.subscription.status;
@@ -300,7 +310,7 @@ export default class ESWebsocket {
             }
             if (response.status === 401) {
                 if (retry) throw new Error('401 Unauthorized');
-                console.warn(`\x1b[31mTwitch websocket: 401 Unauthorized \x1b[0m`);
+                console.warn(`\x1b[33mTwitch websocket: 401 Unauthorized \x1b[0m`);
                 const token = await this.#auth.refreshUserAccessToken();
                 if (token) return await this.#getSubscriptions(true);
             }
@@ -348,7 +358,7 @@ export default class ESWebsocket {
             }
             if (response.status === 401) {
                 if (retry) throw new Error('401 Unauthorized');
-                console.warn(`\x1b[31mTwitch websocket: 401 Unauthorized \x1b[0m`);
+                console.warn(`\x1b[33mTwitch websocket: 401 Unauthorized \x1b[0m`);
                 const token = await this.#auth.refreshUserAccessToken();
                 if (token) return await this.#subscribe(websocketID, type, version, condition, true);
             }
@@ -382,7 +392,7 @@ export default class ESWebsocket {
             }
             if (response.status === 401) {
                 if (retry) throw new Error('401 Unauthorized');
-                console.warn(`\x1b[31mTwitch websocket: 401 Unauthorized \x1b[0m`);
+                console.warn(`\x1b[33mTwitch websocket: 401 Unauthorized \x1b[0m`);
                 const token = await this.#auth.refreshUserAccessToken();
                 if (token) return await this.#unsubscribe(idString, true);
             }

@@ -226,10 +226,10 @@ async function initializeEventSub(client) {
         if (client.ws.ping === -1) return websocket.emitter.emit('cleanupComplete');
         const home = client.guilds.cache.get(db.HOME);
         const log = home.channels.cache.get(db.LOG);
-        
+
         if (msg.connect) {
             const embed = {
-                title: 'websocket connected',
+                title: 'connected',
                 description: `Twitch websocket: connected **${msg.id}**\n${msg.subCount} existing subscriptions`,
                 color: 0x5C79D6
             }
@@ -237,11 +237,12 @@ async function initializeEventSub(client) {
             return;
         }
         const embed = {
-            title: msg.code === 1006 ? 'connection lost' : 'connection closed',
-            description: `Twitch websocket: connection **${msg.id ? msg.id + ' ' : ''}**was closed with code **${msg.code}**`,
-            color: msg.code === 1006 ? 0xe4cf99 : 0xc43838
+            title: msg.reconnect ? 'reconnected' : 'disconnected',
+            description: `Twitch websocket: connection **${msg.id}** was closed with code **${msg.code}**`,
+            color: msg.reconnect ? 0xe4cf99 : 0xc43838
         }
         await log.send({ embeds: [embed] });
+        console.log('notification sent');
         websocket.emitter.emit('cleanupComplete');
     });
     websocket.active = true;
