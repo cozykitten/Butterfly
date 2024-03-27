@@ -13,7 +13,7 @@ myIntents.add(
     IntentsBitField.Flags.Guilds,
     IntentsBitField.Flags.GuildMessages,
     IntentsBitField.Flags.MessageContent
-    );
+);
 const client = new Client({ intents: myIntents });
 
 
@@ -47,8 +47,7 @@ login();
 
 //manual exit
 process.on('SIGINT', async () => {
-    console.log('\nexiting -.-');
-    pm2.disconnect();
+    console.log('\nexit command received..');
     db.lastexit = true;
     try {
         await sync(db);
@@ -58,8 +57,8 @@ process.on('SIGINT', async () => {
         const log = await home.channels.fetch(db.LOG);
         await log.send(`Error while syncing the database:\n${error.message}`);
     }
-    const wspromise = eventSub.terminate();
-    const clientpromise = client.destroy();
-    await Promise.all([wspromise, clientpromise]);
+    await eventSub.terminate();
+    await client.destroy();
+    pm2.disconnect();
     process.exit();
 });
